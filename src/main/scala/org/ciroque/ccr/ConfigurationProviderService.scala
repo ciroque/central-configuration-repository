@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
 import org.ciroque.ccr.core.{SettingsDataStore, Commons}
-import org.ciroque.ccr.responses.{EnvironmentResponse, RootResponseProtocol, RootResponse}
+import org.ciroque.ccr.responses.{ListResponse$, RootResponseProtocol, RootResponse}
 import spray.http.MediaTypes._
 import spray.routing.{PathMatchers, HttpService}
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
@@ -32,7 +32,7 @@ trait ConfigurationProviderService extends HttpService {
         respondWithMediaType(`application/json`) {
           respondWithHeaders(Commons.corsHeaders) {
             complete {
-              new EnvironmentResponse(dataStore.retrieveEnvironments.getOrElse(List()))
+              new ListResponse(dataStore.retrieveEnvironments.getOrElse(List()))
             }
           }
         }
@@ -47,7 +47,7 @@ trait ConfigurationProviderService extends HttpService {
         respondWithMediaType(`application/json`) {
           respondWithHeaders(Commons.corsHeaders) {
             complete {
-              new EnvironmentResponse(dataStore.retrieveApplications(path).getOrElse(List()))
+              new ListResponse(dataStore.retrieveApplications(path).getOrElse(List()))
             }
           }
         }
