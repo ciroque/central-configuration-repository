@@ -1,10 +1,11 @@
-package com.example
+package org.ciroque.ccr
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
+import spray.can.Http
+
 import scala.concurrent.duration._
 
 object Boot extends App {
@@ -13,7 +14,7 @@ object Boot extends App {
   implicit val system = ActorSystem("central-configuration-repository-system")
 
   // create and start our service actor
-  val service = system.actorOf(Props[MyServiceActor], "central-configuration-repository-service")
+  val service = system.actorOf(Props[CentralConfigurationRepositoryActor], "central-configuration-repository-service")
 
   implicit val timeout = Timeout(5.seconds)
   // start a new HTTP server on port 8080 with our service actor as the handler

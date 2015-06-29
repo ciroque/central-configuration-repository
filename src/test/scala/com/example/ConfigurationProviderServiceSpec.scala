@@ -25,6 +25,8 @@ class ConfigurationProviderServiceSpec
       Get("/") ~> routes ~> check {
         status.intValue must_== 200
         assertCorsHeaders(headers)
+        responseAs[String] must contain("Please review the documentation to learn how to use this service.")
+        responseAs[String] must contain("/documentation")
       }
     }
   }

@@ -17,7 +17,8 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-testkit" % sprayVersion  % "test",
     "com.typesafe.akka"   %%  "akka-actor"    % akkaVersion,
     "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test",
-    "org.specs2"          %%  "specs2-core"   % "2.3.11"      % "test"
+    "org.specs2"          %%  "specs2-core"   % "2.3.11"      % "test",
+    "io.spray"              %% "spray-json"         % "1.3.0"
   )
 }
 
