@@ -6,7 +6,7 @@ import akka.util.Timeout
 import org.ciroque.ccr.core.{SettingsDataStore, Commons}
 import org.ciroque.ccr.responses.{EnvironmentResponse, RootResponseProtocol, RootResponse}
 import spray.http.MediaTypes._
-import spray.routing.HttpService
+import spray.routing.{PathMatchers, HttpService}
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 
 trait ConfigurationProviderService extends HttpService {
@@ -26,7 +26,7 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def environmentsRoute = pathPrefix(Commons.rootPath) {
+  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get {
         respondWithMediaType(`application/json`) {
@@ -40,5 +40,20 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = rootRoute ~ environmentsRoute
+  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / PathMatchers.Segment) {
+    path =>
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new EnvironmentResponse(dataStore.retrieveApplications(path).getOrElse(List()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def routes = rootRoute ~ environmentsRoute ~ applicationsRoute
 }

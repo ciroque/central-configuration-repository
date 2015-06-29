@@ -4,8 +4,9 @@ import spray.http.HttpHeaders.RawHeader
 
 object Commons {
   val rootPath = "ccr"
-  val settingsPath = s"$rootPath/settings"
-  val emptyArray = "[]"
+
+  val settingsSegment = "settings"
+  var applicationSegment = "app"
 
   val corsHeaders = List(
     RawHeader("Access-Control-Allow-Origin", "*"),
