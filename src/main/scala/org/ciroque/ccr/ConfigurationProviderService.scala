@@ -3,14 +3,15 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.responses.{RootResponseProtocol, RootResponse}
+import org.ciroque.ccr.core.{SettingsDataStore, Commons}
+import org.ciroque.ccr.responses.{EnvironmentResponse, RootResponseProtocol, RootResponse}
 import spray.http.MediaTypes._
 import spray.routing.HttpService
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 
 trait ConfigurationProviderService extends HttpService {
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
+  implicit val dataStore: SettingsDataStore
 
   def rootRoute = pathEndOrSingleSlash {
     get {
@@ -25,5 +26,19 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = rootRoute
+  def environmentsRoute = pathPrefix(Commons.rootPath) {
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new EnvironmentResponse(dataStore.retrieveEnvironments.getOrElse(List()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def routes = rootRoute ~ environmentsRoute
 }
