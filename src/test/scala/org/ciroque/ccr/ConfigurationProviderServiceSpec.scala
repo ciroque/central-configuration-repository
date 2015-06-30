@@ -2,10 +2,12 @@ package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.{Commons, SettingsDataStore}
+import org.ciroque.ccr.models.Setting
 import org.specs2.mutable.Specification
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import spray.testkit.Specs2RouteTest
+import org.joda.time.{DateTimeZone, DateTime}
 
 class ConfigurationProviderServiceSpec
   extends Specification
@@ -122,6 +124,15 @@ class ConfigurationProviderServiceSpec
           responseString must contain("user.timeout")
           responseString must contain("user.appskin")
         }
+      }
+    }
+
+    "WTF" in {
+      "print out a thingy" in {
+
+        val setting = Setting("env", "app", "scope", "setting", "1000000", DateTime.now(DateTimeZone.UTC), DateTime.now(DateTimeZone.UTC), 5000)
+        println(setting.toJson.prettyPrint)
+        true must_== true
       }
     }
   }
