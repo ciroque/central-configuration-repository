@@ -59,7 +59,7 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "return a list of applications given an environment" in {
+    "handle applications endpoint requests" in {
       "return a list of applications" in {
         Get(s"/$settingsPath/dev") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
@@ -81,8 +81,8 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "return a list of scopes given an environment and application" in {
-      "return a list of applications" in {
+    "handle scopes endpoint requests" in {
+      "return a list of scopes" in {
         Get(s"/$settingsPath/dev/dev-app-one") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
