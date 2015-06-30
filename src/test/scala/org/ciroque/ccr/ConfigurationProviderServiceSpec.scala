@@ -54,12 +54,12 @@ class ConfigurationProviderServiceSpec
         runAssertsAgainst(s"/$settingsPath")
       }
 
-      "return a list of environments using an ending slash" in {
+      "return a list of environments with an ending slash" in {
         runAssertsAgainst(s"/$settingsPath/")
       }
     }
 
-    "handle application endpoint requests" in {
+    "return a list of applications given an environment" in {
       "return a list of applications" in {
         Get(s"/$settingsPath/dev") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
@@ -70,13 +70,35 @@ class ConfigurationProviderServiceSpec
         }
       }
 
-      "return a list of applications using ending slash" in {
+      "return a list of applications given an environment with a trailing slash" in {
         Get(s"/$settingsPath/dev/") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
           responseString must contain("dev-app-one")
           responseString must contain("dev-app-two")
+        }
+      }
+    }
+
+    "return a list of scopes given an environment and application" in {
+      "return a list of applications" in {
+        Get(s"/$settingsPath/dev/dev-app-one") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val responseString = responseAs[String]
+          responseString must contain("logging")
+          responseString must contain("global")
+        }
+      }
+
+      "return a list of scopes given an environment and application with a trailing slash" in {
+        Get(s"/$settingsPath/dev/dev-app-one/") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val responseString = responseAs[String]
+          responseString must contain("logging")
+          responseString must contain("global")
         }
       }
     }
