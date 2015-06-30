@@ -26,20 +26,6 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
-    pathEndOrSingleSlash {
-      get {
-        respondWithMediaType(`application/json`) {
-          respondWithHeaders(Commons.corsHeaders) {
-            complete {
-              new InterstitialResponse(dataStore.retrieveEnvironments.getOrElse(List()))
-            }
-          }
-        }
-      }
-    }
-  }
-
   def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / PathMatchers.Segment) {
     environment =>
     pathEndOrSingleSlash {
@@ -48,6 +34,20 @@ trait ConfigurationProviderService extends HttpService {
           respondWithHeaders(Commons.corsHeaders) {
             complete {
               new InterstitialResponse(dataStore.retrieveApplications(environment).getOrElse(List()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new InterstitialResponse(dataStore.retrieveEnvironments.getOrElse(List()))
             }
           }
         }
@@ -70,5 +70,20 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = rootRoute ~ applicationsRoute ~ environmentsRoute ~ scopesRoute
+  def settingsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
+    (environment, application, scope) =>
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new InterstitialResponse(dataStore.retrieveSettingNames(environment, application, scope).getOrElse(List()))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def routes = rootRoute ~ applicationsRoute ~ environmentsRoute ~ scopesRoute ~ settingsRoute
 }

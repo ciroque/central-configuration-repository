@@ -102,5 +102,27 @@ class ConfigurationProviderServiceSpec
         }
       }
     }
+
+    "handle settings endpoint requests" in {
+      "return a list of scopes" in {
+        Get(s"/$settingsPath/dev/dev-app-one/global") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val responseString = responseAs[String]
+          responseString must contain("user.timeout")
+          responseString must contain("user.appskin")
+        }
+      }
+
+      "return a list of scopes given an environment and application with a trailing slash" in {
+        Get(s"/$settingsPath/dev/dev-app-one/global/") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val responseString = responseAs[String]
+          responseString must contain("user.timeout")
+          responseString must contain("user.appskin")
+        }
+      }
+    }
   }
 }

@@ -11,4 +11,6 @@ class MockSettingsDataStore extends SettingsDataStore {
   override def retrieveEnvironments: Option[List[String]] = Some(List("dev", "qa", "beta", "staging", "prod"))
 
   override def retrieveScopes(environment: String, application: String): Option[List[String]] = Some(List("logging", "global"))
+
+  override def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]] = Some(List("user.timeout", "user.appskin"))
 }
