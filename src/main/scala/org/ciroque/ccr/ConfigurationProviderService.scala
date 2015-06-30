@@ -13,7 +13,7 @@ trait ConfigurationProviderService extends HttpService {
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  def rootRoute = pathEndOrSingleSlash {
+  def defaultRoute = pathEndOrSingleSlash {
     get {
       respondWithMediaType(`application/json`) {
         respondWithHeaders(Commons.corsHeaders) {
@@ -26,7 +26,7 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / PathMatchers.Segment) {
+  def environmentRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / PathMatchers.Segment) {
     environment =>
     pathEndOrSingleSlash {
       get {
@@ -41,7 +41,7 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
+  def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get {
         respondWithMediaType(`application/json`) {
@@ -85,5 +85,5 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = rootRoute ~ applicationsRoute ~ environmentsRoute ~ scopesRoute ~ settingsRoute
+  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ scopesRoute ~ settingsRoute
 }
