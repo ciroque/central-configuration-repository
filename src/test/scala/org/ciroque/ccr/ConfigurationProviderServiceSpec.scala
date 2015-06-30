@@ -29,7 +29,7 @@ class ConfigurationProviderServiceSpec
   def actorRefFactory: ActorRefFactory = system
 
   "ConfigurationProviderService" should {
-    "return a silly message on the root route" in {
+    "return a silly message on the default route" in {
       Get("/") ~> routes ~> check {
         status.intValue must_== 200
         assertCorsHeaders(headers)
@@ -38,7 +38,7 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "handle environment endpoint requests" in {
+    "handle root endpoint requests" in {
       def runAssertsAgainst(uri: String) = {
         Get(uri) ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
@@ -61,7 +61,7 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "handle applications endpoint requests" in {
+    "handle environment endpoint requests" in {
       "return a list of applications" in {
         Get(s"/$settingsPath/dev") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
@@ -83,7 +83,7 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "handle scopes endpoint requests" in {
+    "handle application endpoint requests" in {
       "return a list of scopes" in {
         Get(s"/$settingsPath/dev/dev-app-one") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
@@ -105,8 +105,8 @@ class ConfigurationProviderServiceSpec
       }
     }
 
-    "handle settings endpoint requests" in {
-      "return a list of scopes" in {
+    "handle scope endpoint requests" in {
+      "return a list of settings" in {
         Get(s"/$settingsPath/dev/dev-app-one/global") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
@@ -116,7 +116,7 @@ class ConfigurationProviderServiceSpec
         }
       }
 
-      "return a list of scopes given an environment and application with a trailing slash" in {
+      "return a list of settings given an environment and application with a trailing slash" in {
         Get(s"/$settingsPath/dev/dev-app-one/global/") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
@@ -124,15 +124,6 @@ class ConfigurationProviderServiceSpec
           responseString must contain("user.timeout")
           responseString must contain("user.appskin")
         }
-      }
-    }
-
-    "WTF" in {
-      "print out a thingy" in {
-
-        val setting = Setting("env", "app", "scope", "setting", "1000000", DateTime.now(DateTimeZone.UTC), DateTime.now(DateTimeZone.UTC), 5000)
-        println(setting.toJson.prettyPrint)
-        true must_== true
       }
     }
   }

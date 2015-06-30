@@ -26,6 +26,20 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
+  def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new InterstitialResponse(dataStore.retrieveEnvironments.getOrElse(List()))
+            }
+          }
+        }
+      }
+    }
+  }
+
   def environmentRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / PathMatchers.Segment) {
     environment =>
     pathEndOrSingleSlash {
@@ -41,21 +55,7 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
-    pathEndOrSingleSlash {
-      get {
-        respondWithMediaType(`application/json`) {
-          respondWithHeaders(Commons.corsHeaders) {
-            complete {
-              new InterstitialResponse(dataStore.retrieveEnvironments.getOrElse(List()))
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def scopesRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
+  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
     (environment, application) =>
     pathEndOrSingleSlash {
       get {
@@ -70,7 +70,7 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def settingsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
+  def scopeRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
     pathEndOrSingleSlash {
       get {
@@ -85,5 +85,5 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ scopesRoute ~ settingsRoute
+  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ applicationsRoute ~ scopeRoute
 }
