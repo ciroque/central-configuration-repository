@@ -7,5 +7,5 @@ trait SettingsDataStore {
   def retrieveEnvironments: Option[List[String]]
   def retrieveScopes(environment: String, application: String): Option[List[String]]
   def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]]
-  def retrieveSetting(environment: String, application: String, scope: String, seatting: String): Option[Setting]
+  def retrieveSetting(environment: String, application: String, scope: String, setting: String): Option[Setting]
 }
