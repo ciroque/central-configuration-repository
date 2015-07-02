@@ -3,7 +3,7 @@ package org.ciroque.ccr.models
 import org.joda.time.DateTime
 import spray.json.{JsString, JsValue, RootJsonFormat, DefaultJsonProtocol}
 
-object Setting extends DefaultJsonProtocol {
+object SettingFactory extends DefaultJsonProtocol {
 
   implicit object DateTimeFormatter extends RootJsonFormat[DateTime] {
     override def read(json: JsValue): DateTime = DateTime.parse(json.toString())

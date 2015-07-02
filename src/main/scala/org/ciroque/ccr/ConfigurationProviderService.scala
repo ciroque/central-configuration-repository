@@ -85,5 +85,20 @@ trait ConfigurationProviderService extends HttpService {
     }
   }
 
-  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ applicationsRoute ~ scopeRoute
+  def settingRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
+    (environment, application, scope, setting) =>
+    pathEndOrSingleSlash {
+      get {
+        respondWithMediaType(`application/json`) {
+          respondWithHeaders(Commons.corsHeaders) {
+            complete {
+              new SettingResponse(dataStore.retrieveSetting(environment, application, scope, setting))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ applicationsRoute ~ settingRoute ~ scopeRoute
 }

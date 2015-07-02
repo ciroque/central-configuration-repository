@@ -2,12 +2,11 @@ package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.{Commons, SettingsDataStore}
-import org.ciroque.ccr.models.Setting
+import org.ciroque.ccr.responses.SettingResponse
 import org.specs2.mutable.Specification
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import spray.testkit.Specs2RouteTest
-import org.joda.time.{DateTimeZone, DateTime}
 
 class ConfigurationProviderServiceSpec
   extends Specification
@@ -123,6 +122,28 @@ class ConfigurationProviderServiceSpec
           val responseString = responseAs[String]
           responseString must contain("user.timeout")
           responseString must contain("user.appskin")
+        }
+      }
+    }
+
+    "handle setting endpoint requests" in {
+      "return the setting" in {
+        import spray.json._
+        Get(s"/$settingsPath/dev/dev-app-one/global/log-level") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val mockDatastore = dataStore.asInstanceOf[MockSettingsDataStore]
+          responseAs[String] must_== SettingResponse(Some(mockDatastore.setting)).toJson.prettyPrint
+        }
+      }
+
+      "return the setting with a trailing slash" in {
+        import spray.json._
+        Get(s"/$settingsPath/dev/dev-app-one/global/log-level/") ~> routes ~> check {
+          status.intValue must_== HTTP_SUCCESS_STATUS
+          assertCorsHeaders(headers)
+          val mockDatastore = dataStore.asInstanceOf[MockSettingsDataStore]
+          responseAs[String] must_== SettingResponse(Some(mockDatastore.setting)).toJson.prettyPrint
         }
       }
     }

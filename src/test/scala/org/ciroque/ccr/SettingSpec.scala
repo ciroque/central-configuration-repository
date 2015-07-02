@@ -1,6 +1,6 @@
 package org.ciroque.ccr
 
-import org.ciroque.ccr.models.Setting
+import org.ciroque.ccr.models.SettingFactory
 import org.joda.time.{DateTimeZone, DateTime}
 import org.specs2.mutable.Specification
 import spray.json.{JsNumber, JsValue, JsString}
@@ -13,7 +13,7 @@ class SettingSpec extends Specification {
     val expiresAt = effectiveAt.plusMonths(6)
 
     "be constructable via a flattened parameter factory" in {
-      val setting = Setting("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
+      val setting = SettingFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
       setting.key.environment must_== "env"
       setting.key.application must_== "app"
       setting.key.scope must_== "scope"
@@ -29,7 +29,7 @@ class SettingSpec extends Specification {
         map.get(key).map(actualValue => actualValue must_== expectedValue)
       }
 
-      val setting = Setting("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
+      val setting = SettingFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
       val json = setting.toJson.asJsObject
 
       val fields = json.fields
