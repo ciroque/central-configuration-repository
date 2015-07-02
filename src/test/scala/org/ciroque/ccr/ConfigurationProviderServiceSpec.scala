@@ -47,6 +47,7 @@ class ConfigurationProviderServiceSpec
           responseString must contain("dev")
           responseString must contain("qa")
           responseString must contain("prod")
+          responseString must contain("global")
         }
       }
 

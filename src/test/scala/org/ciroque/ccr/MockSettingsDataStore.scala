@@ -8,35 +8,31 @@ import org.joda.time.{DateTime, DateTimeZone}
 class MockSettingsDataStore extends SettingsDataStore {
   
   override def retrieveApplications(environment: String): Option[List[String]] = {
-    val applications = settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct
-    applications match {
+    settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct match {
       case List() => None
-      case _ => Some(applications)
+      case _ => Some(settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct)
     }
   }
 
   override def retrieveEnvironments: Option[List[String]] =
-    Some(settings.map(setting => setting.key.environment).distinct)
+    Some(settings.map(setting => setting.key.environment).distinct :+ "global")
 
   override def retrieveScopes(environment: String, application: String): Option[List[String]] = {
-    val scopes = settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct
-    scopes match {
+    settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct match {
       case List() => None
-      case _ => Some(scopes)
+      case _ => Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct)
     }
   }
 
   override def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]] = {
-    val settingNames =settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct
-    settingNames match {
+    settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct match {
       case List() => None
-      case _ => Some(settingNames)
+      case _ => Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct)
     }
   }
 
   override def retrieveSetting(environment: String, application: String, scope: String, settingName: String): Option[Setting] = {
-    val setting = settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting)
-    setting match {
+    settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting) match {
       case List() => None
       case head::tail => Some(head)
     }
