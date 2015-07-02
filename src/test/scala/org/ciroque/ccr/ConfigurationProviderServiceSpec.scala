@@ -14,6 +14,7 @@ class ConfigurationProviderServiceSpec
   with ConfigurationProviderService {
 
   val HTTP_SUCCESS_STATUS = 200
+  val HTTP_NOT_FOUND_STATUS = 404
 
   val settingsPath = s"${Commons.rootPath}/${Commons.settingsSegment}"
 
@@ -64,8 +65,8 @@ class ConfigurationProviderServiceSpec
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
-          responseString must contain("dev-app-one")
-          responseString must contain("dev-app-two")
+          responseString must contain("ui")
+          responseString must contain("svc")
         }
       }
 
@@ -74,8 +75,8 @@ class ConfigurationProviderServiceSpec
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
-          responseString must contain("dev-app-one")
-          responseString must contain("dev-app-two")
+          responseString must contain("ui")
+          responseString must contain("svc")
         }
       }
     }
@@ -142,6 +143,33 @@ class ConfigurationProviderServiceSpec
           assertCorsHeaders(headers)
           val mockDatastore = dataStore.asInstanceOf[MockSettingsDataStore]
           responseAs[String] must_== SettingResponse(Some(mockDatastore.primarySetting)).toJson.prettyPrint
+        }
+      }
+    }
+
+    "404's" in {
+      "environment not found" in {
+        Get(s"/$settingsPath/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+        }
+      }
+      "application not found" in {
+        Get(s"/$settingsPath/404/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+        }
+      }
+      "scope not found" in {
+        Get(s"/$settingsPath/404/404/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+        }
+      }
+      "setting not found" in {
+        Get(s"/$settingsPath/404/404/404/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
         }
       }
     }

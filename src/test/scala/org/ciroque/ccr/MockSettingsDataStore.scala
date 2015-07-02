@@ -8,26 +8,38 @@ import org.joda.time.{DateTime, DateTimeZone}
 class MockSettingsDataStore extends SettingsDataStore {
   
   override def retrieveApplications(environment: String): Option[List[String]] = {
-    val map = Map("dev" -> List("dev-app-one", "dev-app-two"))
-    map.get(environment)
+    val applications = settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct
+    applications match {
+      case List() => None
+      case _ => Some(applications)
+    }
   }
 
-  override def retrieveEnvironments: Option[List[String]] = Some(settings.map(setting => setting.key.environment).distinct)
+  override def retrieveEnvironments: Option[List[String]] =
+    Some(settings.map(setting => setting.key.environment).distinct)
 
-  override def retrieveScopes(environment: String, application: String): Option[List[String]] = Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct)
+  override def retrieveScopes(environment: String, application: String): Option[List[String]] = {
+    val scopes = settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct
+    scopes match {
+      case List() => None
+      case _ => Some(scopes)
+    }
+  }
 
-  override def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]] =
-    Some(settings
-      .filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope)
-      .map(setting => setting.key.setting)
-  )
+  override def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]] = {
+    val settingNames =settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct
+    settingNames match {
+      case List() => None
+      case _ => Some(settingNames)
+    }
+  }
 
   override def retrieveSetting(environment: String, application: String, scope: String, settingName: String): Option[Setting] = {
-    Some(settings
-      .filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName)
-      .map(setting => setting)
-    .head)
-//    Some(primarySetting)
+    val setting = settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting)
+    setting match {
+      case List() => None
+      case head::tail => Some(head)
+    }
   }
 
   val effectiveAt = DateTime.now(DateTimeZone.UTC).withZone(DateTimeZone.forID("America/New_York"))
