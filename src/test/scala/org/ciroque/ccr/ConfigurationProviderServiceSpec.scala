@@ -45,8 +45,6 @@ class ConfigurationProviderServiceSpec
           val responseString = responseAs[String]
           responseString must contain("dev")
           responseString must contain("qa")
-          responseString must contain("beta")
-          responseString must contain("staging")
           responseString must contain("prod")
         }
       }
@@ -84,7 +82,7 @@ class ConfigurationProviderServiceSpec
 
     "handle application endpoint requests" in {
       "return a list of scopes" in {
-        Get(s"/$settingsPath/dev/dev-app-one") ~> routes ~> check {
+        Get(s"/$settingsPath/prod/svc") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
@@ -94,7 +92,7 @@ class ConfigurationProviderServiceSpec
       }
 
       "return a list of scopes given an environment and application with a trailing slash" in {
-        Get(s"/$settingsPath/dev/dev-app-one/") ~> routes ~> check {
+        Get(s"/$settingsPath/prod/svc/") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
@@ -106,22 +104,22 @@ class ConfigurationProviderServiceSpec
 
     "handle scope endpoint requests" in {
       "return a list of settings" in {
-        Get(s"/$settingsPath/dev/dev-app-one/global") ~> routes ~> check {
+        Get(s"/$settingsPath/dev/ui/logging") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
-          responseString must contain("user.timeout")
-          responseString must contain("user.appskin")
+          responseString must contain("log-level")
+          responseString must contain("logfile")
         }
       }
 
       "return a list of settings given an environment and application with a trailing slash" in {
-        Get(s"/$settingsPath/dev/dev-app-one/global/") ~> routes ~> check {
+        Get(s"/$settingsPath/prod/svc/global/") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val responseString = responseAs[String]
-          responseString must contain("user.timeout")
-          responseString must contain("user.appskin")
+          responseString must contain("timeout")
+          responseString must contain("app-skin")
         }
       }
     }
@@ -129,21 +127,21 @@ class ConfigurationProviderServiceSpec
     "handle setting endpoint requests" in {
       "return the setting" in {
         import spray.json._
-        Get(s"/$settingsPath/dev/dev-app-one/global/log-level") ~> routes ~> check {
+        Get(s"/$settingsPath/dev/ui/logging/log-level") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val mockDatastore = dataStore.asInstanceOf[MockSettingsDataStore]
-          responseAs[String] must_== SettingResponse(Some(mockDatastore.setting)).toJson.prettyPrint
+          responseAs[String] must_== SettingResponse(Some(mockDatastore.primarySetting)).toJson.prettyPrint
         }
       }
 
       "return the setting with a trailing slash" in {
         import spray.json._
-        Get(s"/$settingsPath/dev/dev-app-one/global/log-level/") ~> routes ~> check {
+        Get(s"/$settingsPath/dev/ui/logging/log-level/") ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)
           val mockDatastore = dataStore.asInstanceOf[MockSettingsDataStore]
-          responseAs[String] must_== SettingResponse(Some(mockDatastore.setting)).toJson.prettyPrint
+          responseAs[String] must_== SettingResponse(Some(mockDatastore.primarySetting)).toJson.prettyPrint
         }
       }
     }
