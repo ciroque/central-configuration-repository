@@ -54,8 +54,8 @@ trait ConfigurationProviderService extends HttpService {
                 }
                 case None => respondWithStatus(StatusCodes.NotFound) {
                   complete {
-                    ""
-                  } // TODO: This should be something appropriate.
+                    s"environment '$environment' was not found"
+                  }
                 }
               }
             }
@@ -78,8 +78,8 @@ trait ConfigurationProviderService extends HttpService {
                 case None =>
                   respondWithStatus(StatusCodes.NotFound) {
                     complete {
-                      ""
-                    } // TODO: This should be something appropriate.
+                      s"application '$application' in environment '$environment' was not found"
+                    }
                   }
               }
             }
@@ -102,8 +102,8 @@ trait ConfigurationProviderService extends HttpService {
                 case None =>
                   respondWithStatus(StatusCodes.NotFound) {
                     complete {
-                      ""
-                    } // TODO: This should be something appropriate.
+                      s"scope '$scope' for application '$application' in environment '$environment' was not found"
+                    }
                   }
               }
             }
@@ -126,8 +126,8 @@ trait ConfigurationProviderService extends HttpService {
                 case None =>
                   respondWithStatus(StatusCodes.NotFound) {
                     complete {
-                      ""
-                    } // TODO: This should be something appropriate.
+                      s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found"
+                    }
                   }
               }
             }

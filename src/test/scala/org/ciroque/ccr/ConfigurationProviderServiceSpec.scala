@@ -149,28 +149,60 @@ class ConfigurationProviderServiceSpec
     }
 
     "404's" in {
-      "environment not found" in {
+      "environment 404 not found" in {
         Get(s"/$settingsPath/404") ~> routes ~> check {
           status.intValue must_== HTTP_NOT_FOUND_STATUS
           assertCorsHeaders(headers)
+          responseAs[String] must contain("environment '404' was not found")
         }
       }
-      "application not found" in {
-        Get(s"/$settingsPath/404/404") ~> routes ~> check {
+      "environment gump not found" in {
+        Get(s"/$settingsPath/gump") ~> routes ~> check {
           status.intValue must_== HTTP_NOT_FOUND_STATUS
           assertCorsHeaders(headers)
+          responseAs[String] must contain("environment 'gump' was not found")
         }
       }
-      "scope not found" in {
-        Get(s"/$settingsPath/404/404/404") ~> routes ~> check {
+      "application 404 not found" in {
+        Get(s"/$settingsPath/dev/404") ~> routes ~> check {
           status.intValue must_== HTTP_NOT_FOUND_STATUS
           assertCorsHeaders(headers)
+          responseAs[String] must contain("application '404' in environment 'dev' was not found")
         }
       }
-      "setting not found" in {
-        Get(s"/$settingsPath/404/404/404/404") ~> routes ~> check {
+      "application star-lord not found" in {
+        Get(s"/$settingsPath/dev/star-lord") ~> routes ~> check {
           status.intValue must_== HTTP_NOT_FOUND_STATUS
           assertCorsHeaders(headers)
+          responseAs[String] must contain("application 'star-lord' in environment 'dev' was not found")
+        }
+      }
+      "scope 404 not found" in {
+        Get(s"/$settingsPath/dev/ui/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+          responseAs[String] must contain("scope '404' for application 'ui' in environment 'dev' was not found")
+        }
+      }
+      "scope gypsy-danger not found" in {
+        Get(s"/$settingsPath/dev/ui/gypsy-danger") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+          responseAs[String] must contain("scope 'gypsy-danger' for application 'ui' in environment 'dev' was not found")
+        }
+      }
+      "setting 404 not found" in {
+        Get(s"/$settingsPath/dev/ui/logging/404") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+          responseAs[String] must contain("setting '404' in scope 'logging' for application 'ui' in environment 'dev' was not found")
+        }
+      }
+      "setting bruce-leroy not found" in {
+        Get(s"/$settingsPath/dev/ui/logging/bruce-leroy") ~> routes ~> check {
+          status.intValue must_== HTTP_NOT_FOUND_STATUS
+          assertCorsHeaders(headers)
+          responseAs[String] must contain("setting 'bruce-leroy' in scope 'logging' for application 'ui' in environment 'dev' was not found")
         }
       }
     }
