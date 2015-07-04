@@ -2,10 +2,14 @@ package org.ciroque.ccr.core
 
 import org.ciroque.ccr.models.SettingFactory.Setting
 
-trait SettingsDataStore {
-  def retrieveApplications(environment: String): Option[List[String]]
-  def retrieveEnvironments: Option[List[String]]
-  def retrieveScopes(environment: String, application: String): Option[List[String]]
-  def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]]
+trait CcrTypes {
+  type InterstitialResultOption = Option[List[String]]
+}
+
+trait SettingsDataStore extends CcrTypes {
+  def retrieveApplications(environment: String): InterstitialResultOption
+  def retrieveEnvironments: InterstitialResultOption
+  def retrieveScopes(environment: String, application: String): InterstitialResultOption
+  def retrieveSettingNames(environment: String, application: String, scope: String): InterstitialResultOption
   def retrieveSetting(environment: String, application: String, scope: String, setting: String): Option[Setting]
 }

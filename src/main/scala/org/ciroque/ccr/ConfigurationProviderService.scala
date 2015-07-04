@@ -3,16 +3,36 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.core.{Commons, SettingsDataStore}
+import org.ciroque.ccr.core.{CcrTypes, Commons, SettingsDataStore}
 import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
 import spray.http.StatusCodes
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.routing.HttpService
 
-trait ConfigurationProviderService extends HttpService {
+trait ConfigurationProviderService
+  extends HttpService
+  with CcrTypes {
+
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
+
+  def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String) = {
+    respondWithMediaType(`application/json`) {
+      respondWithHeaders(Commons.corsHeaders) {
+        result match {
+          case Some(list) => complete {
+            new InterstitialResponse(list)
+          }
+          case None => respondWithStatus(StatusCodes.NotFound) {
+            complete {
+              notFoundMessage
+            }
+          }
+        }
+      }
+    }
+  }
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
@@ -30,13 +50,7 @@ trait ConfigurationProviderService extends HttpService {
   def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get {
-        respondWithMediaType(`application/json`) {
-          respondWithHeaders(Commons.corsHeaders) {
-            complete {
-              new InterstitialResponse(dataStore.retrieveEnvironments.getOrElse(List()))
-            }
-          }
-        }
+        completeInterstitialRoute(dataStore.retrieveEnvironments, s"")
       }
     }
   }
@@ -45,21 +59,9 @@ trait ConfigurationProviderService extends HttpService {
     environment =>
       pathEndOrSingleSlash {
         get {
-          val applications = dataStore.retrieveApplications(environment)
-          respondWithMediaType(`application/json`) {
-            respondWithHeaders(Commons.corsHeaders) {
-              applications match {
-                case Some(apps) => complete {
-                  new InterstitialResponse(apps)
-                }
-                case None => respondWithStatus(StatusCodes.NotFound) {
-                  complete {
-                    s"environment '$environment' was not found"
-                  }
-                }
-              }
-            }
-          }
+          completeInterstitialRoute(
+            dataStore.retrieveApplications(environment),
+            s"environment '$environment' was not found")
         }
       }
   }
@@ -68,22 +70,10 @@ trait ConfigurationProviderService extends HttpService {
     (environment, application) =>
       pathEndOrSingleSlash {
         get {
-          val loadedScopes = dataStore.retrieveScopes(environment, application)
-          respondWithMediaType(`application/json`) {
-            respondWithHeaders(Commons.corsHeaders) {
-              loadedScopes match {
-                case Some(scopes) => complete {
-                  new InterstitialResponse(scopes)
-                }
-                case None =>
-                  respondWithStatus(StatusCodes.NotFound) {
-                    complete {
-                      s"application '$application' in environment '$environment' was not found"
-                    }
-                  }
-              }
-            }
-          }
+          completeInterstitialRoute(
+            dataStore.retrieveScopes(environment, application),
+            s"application '$application' in environment '$environment' was not found"
+          )
         }
       }
   }
@@ -92,22 +82,10 @@ trait ConfigurationProviderService extends HttpService {
     (environment, application, scope) =>
       pathEndOrSingleSlash {
         get {
-          val loadedSettingNames = dataStore.retrieveSettingNames(environment, application, scope)
-          respondWithMediaType(`application/json`) {
-            respondWithHeaders(Commons.corsHeaders) {
-              loadedSettingNames match {
-                case Some(settingNames) => complete {
-                  new InterstitialResponse(settingNames)
-                }
-                case None =>
-                  respondWithStatus(StatusCodes.NotFound) {
-                    complete {
-                      s"scope '$scope' for application '$application' in environment '$environment' was not found"
-                    }
-                  }
-              }
-            }
-          }
+          completeInterstitialRoute(
+            dataStore.retrieveSettingNames(environment, application, scope),
+            s"scope '$scope' for application '$application' in environment '$environment' was not found"
+          )
         }
       }
   }
@@ -116,12 +94,11 @@ trait ConfigurationProviderService extends HttpService {
     (environment, application, scope, setting) =>
       pathEndOrSingleSlash {
         get {
-          val result = dataStore.retrieveSetting(environment, application, scope, setting)
           respondWithMediaType(`application/json`) {
             respondWithHeaders(Commons.corsHeaders) {
-              result match {
+              dataStore.retrieveSetting(environment, application, scope, setting) match {
                 case Some(_) => complete {
-                  new SettingResponse(result)
+                  new SettingResponse(dataStore.retrieveSetting(environment, application, scope, setting))
                 }
                 case None =>
                   respondWithStatus(StatusCodes.NotFound) {

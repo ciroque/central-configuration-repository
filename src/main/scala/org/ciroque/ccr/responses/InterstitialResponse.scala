@@ -6,4 +6,4 @@ object InterstitialResponse extends DefaultJsonProtocol {
   implicit val EnvironmentResponseFormat = jsonFormat1(InterstitialResponse.apply)
 }
 
-case class InterstitialResponse(environments: List[String])
+case class InterstitialResponse(environments: List[String]) extends CcrResponse
