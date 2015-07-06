@@ -60,6 +60,8 @@ class MockSettingsDataStore extends SettingsDataStore {
     SettingFactory("prod", "svc", "global", "timeout", "1000", effectiveAt, expiresAt, 5000)
   )
 
+  val invalidEnvironmentError = "Invalid Environment"
+  val invalidApplicationError = "Invalid Application"
   val putErrorMessage = "Something went wrong."
 
   override def createEnvironment(environment: String): DataStoreResult = {
@@ -71,10 +73,23 @@ class MockSettingsDataStore extends SettingsDataStore {
 
   override def createApplication(environment: String, application: String): DataStoreResult = {
     environment match {
-      case MockSettingsDataStore.failToken => Failure("Invalid Environment")
+      case MockSettingsDataStore.failToken => Failure(invalidEnvironmentError)
       case _ => application match {
         case MockSettingsDataStore.failToken => Failure(putErrorMessage)
         case _ => Success()
+      }
+    }
+  }
+
+  override def createScope(environment: String, application: String, scope: String): DataStoreResult = {
+    environment match {
+      case MockSettingsDataStore.failToken => Failure(invalidEnvironmentError)
+      case _ => application match {
+        case MockSettingsDataStore.failToken => Failure(invalidApplicationError)
+        case _ => scope match {
+          case MockSettingsDataStore.failToken => Failure(putErrorMessage)
+          case _ => Success()
+        }
       }
     }
   }

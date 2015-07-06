@@ -24,6 +24,7 @@ class ConfigurationManagerServiceSpec
 
     val createdEnvironment = "tenv"
     val createdApplication = "tapp"
+    val createdScope = "tscope"
 
     "createdEnvironment creation" in {
       "allow adding an createdEnvironment" in {
@@ -49,12 +50,37 @@ class ConfigurationManagerServiceSpec
         }
       }
       "fail adding an application due to environment" in {
-        Put(s"$managementPath/${MockSettingsDataStore.failToken}") ~> routes ~> check {
+        Put(s"$managementPath/${MockSettingsDataStore.failToken}/$createdApplication") ~> routes ~> check {
           status must_== StatusCodes.UnprocessableEntity
         }
       }
       "fail adding an application due to application" in {
         Put(s"$managementPath/$createdEnvironment/${MockSettingsDataStore.failToken}") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
+      }
+    }
+
+    "scope creation" in {
+      "allow adding a scope" in {
+        Put(s"$managementPath/$createdEnvironment/$createdApplication/$createdScope") ~> routes ~> check {
+          status must_== StatusCodes.Created
+          responseAs[String] must contain(s"/${Commons.rootPath}/${Commons.managementSegment}/$createdEnvironment")
+
+        }
+      }
+      "fail adding a scope due to environment" in {
+        Put(s"$managementPath/${MockSettingsDataStore.failToken}/$createdApplication/$createdScope") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
+      }
+      "fail adding a scope due to application" in {
+        Put(s"$managementPath/$createdEnvironment/${MockSettingsDataStore.failToken}/$createdScope") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
+      }
+      "fail adding a scope due to scope" in {
+        Put(s"$managementPath/$createdEnvironment/$createdApplication/${MockSettingsDataStore.failToken}") ~> routes ~> check {
           status must_== StatusCodes.UnprocessableEntity
         }
       }

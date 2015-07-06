@@ -55,6 +55,31 @@ trait ConfigurationManagerService
                   }
                 }
                 case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
+                  complete {
+                    msg
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+  }
+
+  def scopeCreationRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment) {
+    (environment, application, scope) =>
+      pathEndOrSingleSlash {
+        requestUri { uri =>
+          put {
+            respondWithHeaders(Commons.corsHeaders) {
+              dataStore.createScope(environment, application, scope) match {
+                case Success() => respondWithStatus(StatusCodes.Created) {
+                  complete {
+                    import org.ciroque.ccr.responses.InterstitialPutResponse._
+                    new InterstitialPutResponse(uri.toString())
+                  }
+                }
+                case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
                   complete { msg }
                 }
               }
@@ -64,5 +89,5 @@ trait ConfigurationManagerService
       }
   }
 
-  val routes = environmentCreationRoute ~ applicationCreationRoute
+  val routes = environmentCreationRoute ~ applicationCreationRoute ~ scopeCreationRoute
 }
