@@ -17,12 +17,12 @@ trait ConfigurationProviderService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String) = {
+  private def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String) = {
     respondWithMediaType(`application/json`) {
       respondWithHeaders(Commons.corsHeaders) {
         result match {
           case Some(list) => complete {
-            new InterstitialResponse(list)
+            new InterstitialGetResponse(list)
           }
           case None => respondWithStatus(StatusCodes.NotFound) {
             complete {

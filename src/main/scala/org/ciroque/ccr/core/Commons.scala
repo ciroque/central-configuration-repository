@@ -6,7 +6,7 @@ object Commons {
   val rootPath = "ccr"
 
   val settingsSegment = "settings"
-  var applicationSegment = "app"
+  val managementSegment = "management"
 
   val corsHeaders = List(
     RawHeader("Access-Control-Allow-Origin", "*"),
@@ -14,3 +14,10 @@ object Commons {
     RawHeader("Access-Control-Allow-Methods", "GET")
   )
 }
+
+object DataStoreResults {
+  trait DataStoreResult
+  case class Success() extends DataStoreResult
+  case class Failure(message: String, cause: Throwable = null) extends DataStoreResult
+}
+

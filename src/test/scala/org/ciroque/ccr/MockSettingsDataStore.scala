@@ -1,5 +1,6 @@
 package org.ciroque.ccr
 
+import org.ciroque.ccr.core.DataStoreResults.{Success, Failure, DataStoreResult}
 import org.ciroque.ccr.core.SettingsDataStore
 import org.ciroque.ccr.models.SettingFactory
 import org.ciroque.ccr.models.SettingFactory.Setting
@@ -54,4 +55,11 @@ class MockSettingsDataStore extends SettingsDataStore {
     SettingFactory("prod", "svc", "global", "app-skin", "camo1", effectiveAt, expiresAt, 5000),
     SettingFactory("prod", "svc", "global", "timeout", "1000", effectiveAt, expiresAt, 5000)
   )
+
+  override def createEnvironment(environment: String): DataStoreResult = {
+    environment match {
+      case "fails" => Failure("Why, because I said so")
+      case _ => Success()
+    }
+  }
 }

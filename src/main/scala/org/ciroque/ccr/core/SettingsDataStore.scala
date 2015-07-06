@@ -7,6 +7,8 @@ trait CcrTypes {
 }
 
 trait SettingsDataStore extends CcrTypes {
+  def createEnvironment(environment: String): DataStoreResults.DataStoreResult
+
   def retrieveApplications(environment: String): InterstitialResultOption
   def retrieveEnvironments: InterstitialResultOption
   def retrieveScopes(environment: String, application: String): InterstitialResultOption
