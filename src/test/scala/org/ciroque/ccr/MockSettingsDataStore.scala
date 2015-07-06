@@ -6,6 +6,10 @@ import org.ciroque.ccr.models.SettingFactory
 import org.ciroque.ccr.models.SettingFactory.Setting
 import org.joda.time.{DateTime, DateTimeZone}
 
+object MockSettingsDataStore {
+  val failToken = "fails"
+}
+
 class MockSettingsDataStore extends SettingsDataStore {
   
   override def retrieveApplications(environment: String): Option[List[String]] = {
@@ -56,10 +60,22 @@ class MockSettingsDataStore extends SettingsDataStore {
     SettingFactory("prod", "svc", "global", "timeout", "1000", effectiveAt, expiresAt, 5000)
   )
 
+  val putErrorMessage = "Something went wrong."
+
   override def createEnvironment(environment: String): DataStoreResult = {
     environment match {
-      case "fails" => Failure("Why, because I said so")
+      case MockSettingsDataStore.failToken => Failure(putErrorMessage)
       case _ => Success()
+    }
+  }
+
+  override def createApplication(environment: String, application: String): DataStoreResult = {
+    environment match {
+      case MockSettingsDataStore.failToken => Failure("Invalid Environment")
+      case _ => application match {
+        case MockSettingsDataStore.failToken => Failure(putErrorMessage)
+        case _ => Success()
+      }
     }
   }
 }

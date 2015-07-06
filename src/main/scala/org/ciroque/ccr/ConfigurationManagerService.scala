@@ -41,5 +41,28 @@ trait ConfigurationManagerService
       }
   }
 
-  val routes = environmentCreationRoute
+  def applicationCreationRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment) {
+    (environment, application) =>
+      pathEndOrSingleSlash {
+        requestUri { uri =>
+          put {
+            respondWithHeaders(Commons.corsHeaders) {
+              dataStore.createApplication(environment, application) match {
+                case Success() => respondWithStatus(StatusCodes.Created) {
+                  complete {
+                    import org.ciroque.ccr.responses.InterstitialPutResponse._
+                    new InterstitialPutResponse(uri.toString())
+                  }
+                }
+                case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
+                  complete { msg }
+                }
+              }
+            }
+          }
+        }
+      }
+  }
+
+  val routes = environmentCreationRoute ~ applicationCreationRoute
 }

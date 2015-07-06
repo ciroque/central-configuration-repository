@@ -21,17 +21,42 @@ class ConfigurationManagerServiceSpec
   val HTTP_CREATED_STATUS = 201
 
   "ConfigurationManagementService" should {
-    "allow adding an environment" in {
-      val newEnvironment = "tenv"
-      Put(s"$managementPath/$newEnvironment") ~> routes ~> check {
-        status must_== StatusCodes.Created
-        responseAs[String] must contain(s"/${Commons.rootPath}/${Commons.managementSegment}/$newEnvironment")
 
+    val createdEnvironment = "tenv"
+    val createdApplication = "tapp"
+
+    "createdEnvironment creation" in {
+      "allow adding an createdEnvironment" in {
+        Put(s"$managementPath/$createdEnvironment") ~> routes ~> check {
+          status must_== StatusCodes.Created
+          responseAs[String] must contain(s"/${Commons.rootPath}/${Commons.managementSegment}/$createdEnvironment")
+
+        }
+      }
+      "fail adding an createdEnvironment" in {
+        Put(s"$managementPath/${MockSettingsDataStore.failToken}") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
       }
     }
-    "fail adding an environment" in {
-      Put(s"$managementPath/fails") ~> routes ~> check {
-        status must_== StatusCodes.UnprocessableEntity
+
+    "application creation" in {
+      "allow adding an application" in {
+        Put(s"$managementPath/$createdEnvironment/$createdApplication") ~> routes ~> check {
+          status must_== StatusCodes.Created
+          responseAs[String] must contain(s"/${Commons.rootPath}/${Commons.managementSegment}/$createdEnvironment")
+
+        }
+      }
+      "fail adding an application due to environment" in {
+        Put(s"$managementPath/${MockSettingsDataStore.failToken}") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
+      }
+      "fail adding an application due to application" in {
+        Put(s"$managementPath/$createdEnvironment/${MockSettingsDataStore.failToken}") ~> routes ~> check {
+          status must_== StatusCodes.UnprocessableEntity
+        }
       }
     }
   }
