@@ -31,7 +31,7 @@ class ConfigurationProviderServiceSpec
   "ConfigurationProviderService" should {
     "return a silly message on the default route" in {
       Get("/") ~> routes ~> check {
-        status.intValue must_== 200
+        status must_== Commons.teaPotStatusCode
         assertCorsHeaders(headers)
         responseAs[String] must contain("Please review the documentation to learn how to use this service.")
         responseAs[String] must contain("/documentation")

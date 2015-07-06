@@ -38,9 +38,11 @@ trait ConfigurationProviderService
     get {
       respondWithMediaType(`application/json`) {
         respondWithHeaders(Commons.corsHeaders) {
-          complete {
-            import org.ciroque.ccr.responses.RootResponseProtocol.RootResponseFormat
-            RootResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
+          respondWithStatus(Commons.teaPotStatusCode) {
+            complete {
+              import org.ciroque.ccr.responses.RootResponseProtocol.RootResponseFormat
+              RootResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
+            }
           }
         }
       }
