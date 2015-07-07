@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import org.ciroque.ccr.core.DataStoreResults._
 import org.ciroque.ccr.core.{Commons, SettingsDataStore}
+import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.InterstitialPutResponse
 import spray.http.StatusCodes
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
@@ -80,7 +81,9 @@ trait ConfigurationManagerService
                   }
                 }
                 case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
-                  complete { msg }
+                  complete {
+                    msg
+                  }
                 }
               }
             }
@@ -89,5 +92,33 @@ trait ConfigurationManagerService
       }
   }
 
-  val routes = environmentCreationRoute ~ applicationCreationRoute ~ scopeCreationRoute
+  def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment / Segment) {
+    (environment, application, scope, setting) =>
+      pathEndOrSingleSlash {
+        requestUri { uri =>
+          import spray.httpx.SprayJsonSupport._
+          entity(as[ConfigurationFactory.Configuration]) { configuration =>
+            put {
+              respondWithHeaders(Commons.corsHeaders) {
+                dataStore.upsertSetting(environment, application, scope, setting, configuration) match {
+                  case Success() => respondWithStatus(StatusCodes.Created) {
+                    complete {
+                      import org.ciroque.ccr.responses.InterstitialPutResponse._
+                      new InterstitialPutResponse(uri.toString())
+                    }
+                  }
+                  case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
+                    complete {
+                      msg
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+  }
+
+  val routes = environmentCreationRoute ~ applicationCreationRoute ~ scopeCreationRoute ~ settingUpsertRoute
 }

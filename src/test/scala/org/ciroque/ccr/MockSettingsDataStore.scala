@@ -2,8 +2,8 @@ package org.ciroque.ccr
 
 import org.ciroque.ccr.core.DataStoreResults.{Success, Failure, DataStoreResult}
 import org.ciroque.ccr.core.SettingsDataStore
-import org.ciroque.ccr.models.SettingFactory
-import org.ciroque.ccr.models.SettingFactory.Setting
+import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.{DateTime, DateTimeZone}
 
 object MockSettingsDataStore {
@@ -36,7 +36,7 @@ class MockSettingsDataStore extends SettingsDataStore {
     }
   }
 
-  override def retrieveSetting(environment: String, application: String, scope: String, settingName: String): Option[Setting] = {
+  override def retrieveSetting(environment: String, application: String, scope: String, settingName: String): Option[Configuration] = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting) match {
       case List() => None
       case head::tail => Some(head)
@@ -45,23 +45,25 @@ class MockSettingsDataStore extends SettingsDataStore {
 
   val effectiveAt = DateTime.now(DateTimeZone.UTC).withZone(DateTimeZone.forID("America/New_York"))
   val expiresAt = effectiveAt.plusMonths(6)
-  val primarySetting = SettingFactory("dev", "ui", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000)
+  val primarySetting = ConfigurationFactory("dev", "ui", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000)
   
-  val settings: List[Setting] = List(
+  val settings: List[Configuration] = List(
     primarySetting,
-    SettingFactory("qa", "ui", "logging", "log-level", "DEBUG", effectiveAt, expiresAt, 5000),
-    SettingFactory("prod", "ui", "logging", "log-level", "WARN", effectiveAt, expiresAt, 5000),
-    SettingFactory("dev", "ui", "logging", "logfile", "/var/log/ui.log", effectiveAt, expiresAt, 5000),
-    SettingFactory("dev", "svc", "global", "svc-endpoint", "/my-service", effectiveAt, expiresAt, 5000),
-    SettingFactory("dev", "svc", "logging", "log-level", "ALL", effectiveAt, expiresAt, 5000),
-    SettingFactory("qa", "svc", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000),
-    SettingFactory("prod", "svc", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000),
-    SettingFactory("prod", "svc", "global", "app-skin", "camo1", effectiveAt, expiresAt, 5000),
-    SettingFactory("prod", "svc", "global", "timeout", "1000", effectiveAt, expiresAt, 5000)
+    ConfigurationFactory("qa", "ui", "logging", "log-level", "DEBUG", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("prod", "ui", "logging", "log-level", "WARN", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("dev", "ui", "logging", "logfile", "/var/log/ui.log", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("dev", "svc", "global", "svc-endpoint", "/my-service", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("dev", "svc", "logging", "log-level", "ALL", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("qa", "svc", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("prod", "svc", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("prod", "svc", "global", "app-skin", "camo1", effectiveAt, expiresAt, 5000),
+    ConfigurationFactory("prod", "svc", "global", "timeout", "1000", effectiveAt, expiresAt, 5000)
   )
 
   val invalidEnvironmentError = "Invalid Environment"
   val invalidApplicationError = "Invalid Application"
+  val invalidScopeError = "Invalid Scope"
+  val invalidSettingError = "Invalid Setting"
   val putErrorMessage = "Something went wrong."
 
   override def createEnvironment(environment: String): DataStoreResult = {
@@ -89,6 +91,25 @@ class MockSettingsDataStore extends SettingsDataStore {
         case _ => scope match {
           case MockSettingsDataStore.failToken => Failure(putErrorMessage)
           case _ => Success()
+        }
+      }
+    }
+  }
+
+  override def upsertSetting(environment: String, application: String, scope: String, setting: String, configuration: Configuration): DataStoreResult = {
+    environment match {
+      case MockSettingsDataStore.failToken => Failure(invalidEnvironmentError)
+      case _ => application match {
+        case MockSettingsDataStore.failToken => Failure(invalidApplicationError)
+        case _ => scope match {
+          case MockSettingsDataStore.failToken => Failure(invalidScopeError)
+          case _ => setting match {
+            case MockSettingsDataStore.failToken => Failure(invalidSettingError)
+            case _ => configuration.value match {
+              case MockSettingsDataStore.failToken => Failure(putErrorMessage)
+              case _ => Success()
+            }
+          }
         }
       }
     }

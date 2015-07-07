@@ -1,6 +1,6 @@
 package org.ciroque.ccr
 
-import org.ciroque.ccr.models.SettingFactory
+import org.ciroque.ccr.models.ConfigurationFactory
 import org.joda.time.{DateTimeZone, DateTime}
 import org.specs2.mutable.Specification
 import spray.json.{JsNumber, JsValue, JsString}
@@ -13,7 +13,7 @@ class SettingSpec extends Specification {
     val expiresAt = effectiveAt.plusMonths(6)
 
     "be constructable via a flattened parameter factory" in {
-      val setting = SettingFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
+      val setting = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
       setting.key.environment must_== "env"
       setting.key.application must_== "app"
       setting.key.scope must_== "scope"
@@ -29,7 +29,7 @@ class SettingSpec extends Specification {
         map.get(key).map(actualValue => actualValue must_== expectedValue)
       }
 
-      val setting = SettingFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
+      val setting = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
       val json = setting.toJson.asJsObject
 
       val fields = json.fields
@@ -55,8 +55,8 @@ class SettingSpec extends Specification {
       temporalityFields.keys must contain("expiresAt")
       temporalityFields.keys must contain("ttl")
 
-//      assertValue(temporalityFields, "effectiveAt", JsString(effectiveAt.toString))
-//      assertValue(temporalityFields, "expiresAt", JsString(expiresAt.toString))
+      assertValue(temporalityFields, "effectiveAt", JsString(effectiveAt.toString()))
+      assertValue(temporalityFields, "expiresAt", JsString(expiresAt.toString()))
       assertValue(temporalityFields, "ttl", JsNumber(5000))
 
       true must_== true
