@@ -1,6 +1,6 @@
 import com.typesafe.sbt.SbtNativePackager._
 
-organization  := "com.example"
+organization  := "org.ciroque"
 
 version       := "0.1"
 
@@ -27,10 +27,10 @@ Revolver.settings
 
 enablePlugins(JavaServerAppPackaging)
 
-packageSummary := "Countries of the World microservice"
+packageSummary := "Central Configuration Repository"
 
-packageDescription := "Countries Service"
+packageDescription := "Central Configuration Repository"
 
 maintainer := "Steve Wagner <scalawagz@outlook.com>"
 
-name := "countries"
+name := "ccr"

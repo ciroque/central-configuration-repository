@@ -8,6 +8,8 @@ import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
 import spray.http.StatusCodes
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
+import spray.httpx.marshalling.ToResponseMarshallable
+import spray.routing
 import spray.routing.HttpService
 
 trait ConfigurationProviderService
@@ -17,12 +19,12 @@ trait ConfigurationProviderService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  private def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String) = {
+  private def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String, factory: List[String] => ToResponseMarshallable) = {
     respondWithMediaType(`application/json`) {
       respondWithHeaders(Commons.corsHeaders) {
         result match {
           case Some(list) => complete {
-            new InterstitialGetResponse(list)
+            factory(list)
           }
           case None => respondWithStatus(StatusCodes.NotFound) {
             complete {
@@ -36,15 +38,14 @@ trait ConfigurationProviderService
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
-      respondWithMediaType(`application/json`) {
-        respondWithHeaders(Commons.corsHeaders) {
-          respondWithStatus(Commons.teaPotStatusCode) {
-            complete {
-              import org.ciroque.ccr.responses.RootResponseProtocol.RootResponseFormat
-              RootResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
-            }
-          }
-        }
+      respondWithTeapot
+    }
+  }
+
+  def appRoute = pathPrefix(Commons.rootPath) {
+    pathEndOrSingleSlash {
+      get {
+        respondWithTeapot
       }
     }
   }
@@ -52,7 +53,12 @@ trait ConfigurationProviderService
   def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get {
-        completeInterstitialRoute(dataStore.retrieveEnvironments, s"")
+          dataStore.retrieveEnvironments() match {
+            case Some(list) => complete { EnvironmentGetResponse(list) }
+            case None => respondWithStatus(StatusCodes.NotFound) {
+              complete { "No environments found" }
+            }
+          }
       }
     }
   }
@@ -61,9 +67,11 @@ trait ConfigurationProviderService
     environment =>
       pathEndOrSingleSlash {
         get {
+          println(s"ConfigurationProviderService::environmentRoute")
           completeInterstitialRoute(
             dataStore.retrieveApplications(environment),
-            s"environment '$environment' was not found")
+            s"environment '$environment' was not found",
+            list => ApplicationGetResponse(list))
         }
       }
   }
@@ -72,9 +80,11 @@ trait ConfigurationProviderService
     (environment, application) =>
       pathEndOrSingleSlash {
         get {
+          println(s"ConfigurationProviderService::applicationsRoute")
           completeInterstitialRoute(
             dataStore.retrieveScopes(environment, application),
-            s"application '$application' in environment '$environment' was not found"
+            s"application '$application' in environment '$environment' was not found",
+            list => ScopeGetResponse(list)
           )
         }
       }
@@ -84,9 +94,11 @@ trait ConfigurationProviderService
     (environment, application, scope) =>
       pathEndOrSingleSlash {
         get {
+          println(s"ConfigurationProviderService::scopeRoute")
           completeInterstitialRoute(
-            dataStore.retrieveSettingNames(environment, application, scope),
-            s"scope '$scope' for application '$application' in environment '$environment' was not found"
+            dataStore.retrieveSettings(environment, application, scope),
+            s"scope '$scope' for application '$application' in environment '$environment' was not found",
+            list => SettingGetResponse(list)
           )
         }
       }
@@ -96,11 +108,12 @@ trait ConfigurationProviderService
     (environment, application, scope, setting) =>
       pathEndOrSingleSlash {
         get {
+          println(s"ConfigurationProviderService::settingRoute")
           respondWithMediaType(`application/json`) {
             respondWithHeaders(Commons.corsHeaders) {
-              dataStore.retrieveSetting(environment, application, scope, setting) match {
+              dataStore.retrieveConfiguration(environment, application, scope, setting) match {
                 case Some(_) => complete {
-                  new SettingResponse(dataStore.retrieveSetting(environment, application, scope, setting))
+                  SettingResponse(dataStore.retrieveConfiguration(environment, application, scope, setting))
                 }
                 case None =>
                   respondWithStatus(StatusCodes.NotFound) {
@@ -115,5 +128,18 @@ trait ConfigurationProviderService
       }
   }
 
-  def routes = defaultRoute ~ environmentRoute ~ rootRoute ~ applicationsRoute ~ settingRoute ~ scopeRoute
+  def routes = defaultRoute ~ appRoute ~ environmentRoute ~ applicationsRoute ~ scopeRoute ~ settingRoute ~ rootRoute
+
+  private def respondWithTeapot: routing.Route = {
+    respondWithMediaType(`application/json`) {
+      respondWithHeaders(Commons.corsHeaders) {
+        respondWithStatus(Commons.teaPotStatusCode) {
+          complete {
+            import org.ciroque.ccr.responses.RootResponseProtocol.RootResponseFormat
+            RootResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
+          }
+        }
+      }
+    }
+  }
 }

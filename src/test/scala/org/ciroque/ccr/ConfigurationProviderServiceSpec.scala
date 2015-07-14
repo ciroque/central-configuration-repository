@@ -40,6 +40,7 @@ class ConfigurationProviderServiceSpec
 
     "handle root endpoint requests" in {
       def runAssertsAgainst(uri: String) = {
+        println(s"\n\n\n$uri\n\n\n")
         Get(uri) ~> routes ~> check {
           status.intValue must_== HTTP_SUCCESS_STATUS
           assertCorsHeaders(headers)

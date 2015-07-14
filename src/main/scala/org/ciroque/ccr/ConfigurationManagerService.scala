@@ -19,6 +19,7 @@ trait ConfigurationManagerService
 
   def environmentCreationRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment) {
     (environment) =>
+      println(s"ConfigurationManagerService::environmentCreationRoute($environment)")
       pathEndOrSingleSlash {
         requestUri { uri =>
           put {
@@ -30,9 +31,9 @@ trait ConfigurationManagerService
                     new InterstitialPutResponse(uri.toString())
                   }
                 }
-                case Failure(_, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
+                case Failure(msg, _) => respondWithStatus(StatusCodes.UnprocessableEntity) {
                   complete {
-                    ""
+                    msg
                   }
                 }
               }
@@ -44,6 +45,7 @@ trait ConfigurationManagerService
 
   def applicationCreationRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment) {
     (environment, application) =>
+      println(s"ConfigurationManagerService::applicationCreationRoute($environment, $application)")
       pathEndOrSingleSlash {
         requestUri { uri =>
           put {
@@ -69,6 +71,7 @@ trait ConfigurationManagerService
 
   def scopeCreationRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
+      println(s"ConfigurationManagerService::scopeCreationRoute($environment, $application, $scope)")
       pathEndOrSingleSlash {
         requestUri { uri =>
           put {
@@ -94,13 +97,14 @@ trait ConfigurationManagerService
 
   def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) =>
+      println(s"ConfigurationManagerService::settingUpsertRoute($environment, $application, $scope, $setting)")
       pathEndOrSingleSlash {
         requestUri { uri =>
           import spray.httpx.SprayJsonSupport._
           entity(as[ConfigurationFactory.Configuration]) { configuration =>
             put {
               respondWithHeaders(Commons.corsHeaders) {
-                dataStore.upsertSetting(environment, application, scope, setting, configuration) match {
+                dataStore.upsertConfiguration(environment, application, scope, setting, configuration) match {
                   case Success() => respondWithStatus(StatusCodes.Created) {
                     complete {
                       import org.ciroque.ccr.responses.InterstitialPutResponse._
@@ -120,5 +124,5 @@ trait ConfigurationManagerService
       }
   }
 
-  val routes = environmentCreationRoute ~ applicationCreationRoute ~ scopeCreationRoute ~ settingUpsertRoute
+  def routes = environmentCreationRoute ~ applicationCreationRoute ~ scopeCreationRoute ~ settingUpsertRoute
 }

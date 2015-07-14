@@ -11,7 +11,7 @@ object MockSettingsDataStore {
 }
 
 class MockSettingsDataStore extends SettingsDataStore {
-  
+
   override def retrieveApplications(environment: String): Option[List[String]] = {
     settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct match {
       case List() => None
@@ -19,7 +19,7 @@ class MockSettingsDataStore extends SettingsDataStore {
     }
   }
 
-  override def retrieveEnvironments: Option[List[String]] =
+  override def retrieveEnvironments(): Option[List[String]] =
     Some(settings.map(setting => setting.key.environment).distinct :+ "global")
 
   override def retrieveScopes(environment: String, application: String): Option[List[String]] = {
@@ -29,24 +29,24 @@ class MockSettingsDataStore extends SettingsDataStore {
     }
   }
 
-  override def retrieveSettingNames(environment: String, application: String, scope: String): Option[List[String]] = {
+  override def retrieveSettings(environment: String, application: String, scope: String): Option[List[String]] = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct match {
       case List() => None
       case _ => Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct)
     }
   }
 
-  override def retrieveSetting(environment: String, application: String, scope: String, settingName: String): Option[Configuration] = {
+  override def retrieveConfiguration(environment: String, application: String, scope: String, settingName: String): Option[Configuration] = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting) match {
       case List() => None
-      case head::tail => Some(head)
+      case head :: tail => Some(head)
     }
   }
 
   val effectiveAt = DateTime.now(DateTimeZone.UTC).withZone(DateTimeZone.forID("America/New_York"))
   val expiresAt = effectiveAt.plusMonths(6)
   val primarySetting = ConfigurationFactory("dev", "ui", "logging", "log-level", "INFO", effectiveAt, expiresAt, 5000)
-  
+
   val settings: List[Configuration] = List(
     primarySetting,
     ConfigurationFactory("qa", "ui", "logging", "log-level", "DEBUG", effectiveAt, expiresAt, 5000),
@@ -96,7 +96,7 @@ class MockSettingsDataStore extends SettingsDataStore {
     }
   }
 
-  override def upsertSetting(environment: String, application: String, scope: String, setting: String, configuration: Configuration): DataStoreResult = {
+  override def upsertConfiguration(environment: String, application: String, scope: String, setting: String, configuration: Configuration): DataStoreResult = {
     environment match {
       case MockSettingsDataStore.failToken => Failure(invalidEnvironmentError)
       case _ => application match {
