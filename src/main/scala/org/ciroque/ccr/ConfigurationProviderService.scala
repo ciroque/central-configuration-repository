@@ -6,11 +6,11 @@ import akka.util.Timeout
 import org.ciroque.ccr.core.{CcrTypes, Commons, SettingsDataStore}
 import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
-import spray.http.StatusCodes
+import spray.http.{HttpEntity, HttpResponse, StatusCodes}
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
-import spray.httpx.marshalling.ToResponseMarshallable
+import spray.json._
 import spray.routing
-import spray.routing.HttpService
+import spray.routing.{HttpService, RequestContext}
 
 trait ConfigurationProviderService
   extends HttpService
@@ -19,21 +19,17 @@ trait ConfigurationProviderService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  private def completeInterstitialRoute(result: Option[List[String]], notFoundMessage: String, factory: List[String] => ToResponseMarshallable) = {
-    respondWithMediaType(`application/json`) {
-      respondWithHeaders(Commons.corsHeaders) {
-        result match {
-          case Some(list) => complete {
-            factory(list)
-          }
-          case None => respondWithStatus(StatusCodes.NotFound) {
-            complete {
-              notFoundMessage
-            }
-          }
-        }
-      }
+  private def completeInterstitialRoute(context: RequestContext,
+                                        entities: Option[List[String]],
+                                        notFoundMessage: String,
+                                        factory: List[String] => JsValue) = {
+
+    val (result, statusCode) = entities match {
+      case Some(list) => (list, StatusCodes.OK)
+      case None => (List(notFoundMessage), StatusCodes.NotFound)
     }
+
+    context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, factory(result).toString()), Commons.corsHeaders))
   }
 
   def defaultRoute = pathEndOrSingleSlash {
@@ -52,13 +48,8 @@ trait ConfigurationProviderService
 
   def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
-      get {
-          dataStore.retrieveEnvironments() match {
-            case Some(list) => complete { EnvironmentGetResponse(list) }
-            case None => respondWithStatus(StatusCodes.NotFound) {
-              complete { "No environments found" }
-            }
-          }
+      get { ctx =>
+        completeInterstitialRoute(ctx, dataStore.retrieveEnvironments(), "No environments found.", list => EnvironmentGetResponse(list).toJson)
       }
     }
   }
@@ -66,12 +57,13 @@ trait ConfigurationProviderService
   def environmentRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment) {
     environment =>
       pathEndOrSingleSlash {
-        get {
+        get { ctx =>
           println(s"ConfigurationProviderService::environmentRoute")
           completeInterstitialRoute(
+            ctx,
             dataStore.retrieveApplications(environment),
             s"environment '$environment' was not found",
-            list => ApplicationGetResponse(list))
+            list => ApplicationGetResponse(list).toJson)
         }
       }
   }
@@ -79,13 +71,13 @@ trait ConfigurationProviderService
   def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
     (environment, application) =>
       pathEndOrSingleSlash {
-        get {
+        get { ctx =>
           println(s"ConfigurationProviderService::applicationsRoute")
           completeInterstitialRoute(
+            ctx,
             dataStore.retrieveScopes(environment, application),
             s"application '$application' in environment '$environment' was not found",
-            list => ScopeGetResponse(list)
-          )
+            list => ScopeGetResponse(list).toJson)
         }
       }
   }
@@ -93,12 +85,13 @@ trait ConfigurationProviderService
   def scopeRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
       pathEndOrSingleSlash {
-        get {
+        get { ctx =>
           println(s"ConfigurationProviderService::scopeRoute")
           completeInterstitialRoute(
+            ctx,
             dataStore.retrieveSettings(environment, application, scope),
             s"scope '$scope' for application '$application' in environment '$environment' was not found",
-            list => SettingGetResponse(list)
+            list => SettingGetResponse(list).toJson
           )
         }
       }
