@@ -19,7 +19,8 @@ libraryDependencies ++= {
     "com.typesafe.akka"   %%  "akka-testkit"  % akkaVersion   % "test",
     "org.specs2"          %%  "specs2-core"   % "2.3.11"      % "test",
     "io.spray"            %% "spray-json"     % "1.3.0",
-    "org.mongodb"         %% "casbah"         % "2.8.1"
+    "org.mongodb"         %% "casbah"         % "2.8.1",
+    "org.easymock"        % "easymock"       % "3.2"
   )
 }
 

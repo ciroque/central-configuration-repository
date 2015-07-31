@@ -18,9 +18,4 @@ object Commons {
   )
 }
 
-object DataStoreResults {
-  trait DataStoreResult
-  case class Success() extends DataStoreResult
-  case class Failure(message: String, cause: Throwable = null) extends DataStoreResult
-}
 

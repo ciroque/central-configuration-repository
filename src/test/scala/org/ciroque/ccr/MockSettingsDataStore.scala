@@ -1,6 +1,6 @@
 package org.ciroque.ccr
 
-import org.ciroque.ccr.core.DataStoreResults.{Success, Failure, DataStoreResult}
+import org.ciroque.ccr.core.DataStoreResults._
 import org.ciroque.ccr.core.SettingsDataStore
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
@@ -10,36 +10,40 @@ object MockSettingsDataStore {
   val failToken = "fails"
 }
 
+@deprecated("just don't use it. switching to EasyMock")
 class MockSettingsDataStore extends SettingsDataStore {
 
-  override def retrieveApplications(environment: String): Option[List[String]] = {
+  override def retrieveApplications(environment: String): DataStoreResult = {
     settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct match {
-      case List() => None
-      case _ => Some(settings.filter(setting => setting.key.environment == environment).map(setting => setting.key.application).distinct)
+      case Nil => NotFound(environment)
+      case environments => Found[String](environments)
     }
   }
 
-  override def retrieveEnvironments(): Option[List[String]] =
-    Some(settings.map(setting => setting.key.environment).distinct :+ "global")
+  override def retrieveEnvironments(): DataStoreResult =
+    settings.map(setting => setting.key.environment).distinct match {
+      case Nil => NotFound("environments")
+      case environments => Found[String]("global" +: environments)
+    }
 
-  override def retrieveScopes(environment: String, application: String): Option[List[String]] = {
+  override def retrieveScopes(environment: String, application: String): DataStoreResult = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct match {
-      case List() => None
-      case _ => Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application).map(setting => setting.key.scope).distinct)
+      case Nil => NotFound(s"$environment / $application")
+      case scopes => Found[String](scopes)
     }
   }
 
-  override def retrieveSettings(environment: String, application: String, scope: String): Option[List[String]] = {
+  override def retrieveSettings(environment: String, application: String, scope: String): DataStoreResult = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct match {
-      case List() => None
-      case _ => Some(settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope).map(setting => setting.key.setting).distinct)
+      case Nil => NotFound(s"...")
+      case foundSettings => Found(foundSettings)
     }
   }
 
-  override def retrieveConfiguration(environment: String, application: String, scope: String, settingName: String): Option[Configuration] = {
+  override def retrieveConfiguration(environment: String, application: String, scope: String, settingName: String): DataStoreResult = {
     settings.filter(setting => setting.key.environment == environment && setting.key.application == application && setting.key.scope == scope && setting.key.setting == settingName).map(setting => setting) match {
-      case List() => None
-      case head :: tail => Some(head)
+      case Nil => NotFound(s"...")
+      case configurations => Found[ConfigurationFactory.Configuration](configurations)
     }
   }
 

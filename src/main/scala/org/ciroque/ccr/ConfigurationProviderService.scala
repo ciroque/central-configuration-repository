@@ -3,7 +3,9 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
+import org.ciroque.ccr.core.DataStoreResults._
 import org.ciroque.ccr.core.{CcrTypes, Commons, SettingsDataStore}
+import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
 import spray.http.{HttpEntity, HttpResponse, StatusCodes}
@@ -20,16 +22,19 @@ trait ConfigurationProviderService
   implicit val dataStore: SettingsDataStore
 
   private def completeInterstitialRoute(context: RequestContext,
-                                        entities: Option[List[String]],
+                                        entities: DataStoreResult,
                                         notFoundMessage: String,
                                         factory: List[String] => JsValue) = {
 
     val (result, statusCode) = entities match {
-      case Some(list) => (list, StatusCodes.OK)
-      case None => (List(notFoundMessage), StatusCodes.NotFound)
+      case Found(items: List[String]) => (factory(items).toString(), StatusCodes.OK)
+      case NotFound(key) => (JsString(s"No children of $key found.").toString(), StatusCodes.NotFound)
+      case Failure(message, cause) => (JsString("Something went horribly, horribly wrong.").toString(), StatusCodes.InternalServerError)
+
+      case Success() => throw new UnsupportedOperationException("Success class is deprecated.")
     }
 
-    context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, factory(result).toString()), Commons.corsHeaders))
+    context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result), Commons.corsHeaders))
   }
 
   def defaultRoute = pathEndOrSingleSlash {
@@ -62,7 +67,7 @@ trait ConfigurationProviderService
           completeInterstitialRoute(
             ctx,
             dataStore.retrieveApplications(environment),
-            s"environment '$environment' was not found",
+            s"environment '$environment' has no applications defined.",
             list => ApplicationGetResponse(list).toJson)
         }
       }
@@ -76,7 +81,7 @@ trait ConfigurationProviderService
           completeInterstitialRoute(
             ctx,
             dataStore.retrieveScopes(environment, application),
-            s"application '$application' in environment '$environment' was not found",
+            s"application '$application' in environment '$environment' has no scopes defined.",
             list => ScopeGetResponse(list).toJson)
         }
       }
@@ -90,7 +95,7 @@ trait ConfigurationProviderService
           completeInterstitialRoute(
             ctx,
             dataStore.retrieveSettings(environment, application, scope),
-            s"scope '$scope' for application '$application' in environment '$environment' was not found",
+            s"scope '$scope' for application '$application' in environment '$environment' has no settings defined.",
             list => SettingGetResponse(list).toJson
           )
         }
@@ -105,15 +110,18 @@ trait ConfigurationProviderService
           respondWithMediaType(`application/json`) {
             respondWithHeaders(Commons.corsHeaders) {
               dataStore.retrieveConfiguration(environment, application, scope, setting) match {
-                case Some(_) => complete {
-                  SettingResponse(dataStore.retrieveConfiguration(environment, application, scope, setting))
-                }
-                case None =>
-                  respondWithStatus(StatusCodes.NotFound) {
-                    complete {
-                      s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found"
-                    }
+
+                case Found(list: List[ConfigurationFactory.Configuration]) => complete { SettingResponse(list) }
+                case NotFound(key: String) =>  respondWithStatus(StatusCodes.NotFound) {
+                  complete {
+                    s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found"
                   }
+                }
+                case Failure(msg, cause) => respondWithStatus(StatusCodes.InternalServerError) {
+                  complete {
+                    s"Something really bad happened."
+                  }
+                }
               }
             }
           }
