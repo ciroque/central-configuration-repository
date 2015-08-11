@@ -1,20 +1,23 @@
 package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
-import org.ciroque.ccr.core.{Commons, SettingsDataStore}
-import org.ciroque.ccr.responses.SettingResponse
+import org.ciroque.ccr.core.{DataStoreResults, Commons, SettingsDataStore}
 import org.specs2.mutable.Specification
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import spray.testkit.Specs2RouteTest
 import org.easymock.EasyMock._
+import org.scalatest.mock._
 
 class ConfigurationProviderServiceSpec
   extends Specification
   with Specs2RouteTest
-  with ConfigurationProviderService {
+  with ConfigurationProviderService
+  with EasyMockSugar {
 
   val settingsDataStore: SettingsDataStore = createMock(classOf[SettingsDataStore])
+
+  val sds = mock[SettingsDataStore]
 
   val HTTP_SUCCESS_STATUS = 200
   val HTTP_NOT_FOUND_STATUS = 404
@@ -32,6 +35,17 @@ class ConfigurationProviderServiceSpec
   def actorRefFactory: ActorRefFactory = system
 
   "ConfigurationProviderService" should {
+
+    "work okay with the mock datastore" in {
+      expecting {
+        sds.retrieveEnvironments().andReturn(DataStoreResults.Failure("because", new Exception()))
+      }
+      whenExecuting(sds) {
+        println("throwing")
+      }
+      true must_== true
+    }
+
     "return a silly message on the default route" in {
       Get("/") ~> routes ~> check {
         status must_== Commons.teaPotStatusCode
