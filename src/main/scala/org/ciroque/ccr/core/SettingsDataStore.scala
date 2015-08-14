@@ -3,6 +3,8 @@ package org.ciroque.ccr.core
 import org.ciroque.ccr.core.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 
+import scala.concurrent.Future
+
 object DataStoreResults {
   trait DataStoreResult
 
@@ -26,7 +28,7 @@ trait SettingsDataStore extends CcrTypes {
   def upsertConfiguration(environment: String, application: String, scope: String, setting: String, configuration: Configuration): DataStoreResult
 
   def retrieveApplications(environment: String): DataStoreResult
-  def retrieveEnvironments(): DataStoreResult
+  def retrieveEnvironments(): Future[DataStoreResult]
   def retrieveScopes(environment: String, application: String): DataStoreResult
   def retrieveSettings(environment: String, application: String, scope: String): DataStoreResult
   def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): DataStoreResult

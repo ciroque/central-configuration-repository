@@ -6,11 +6,13 @@ import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.{DateTime, DateTimeZone}
 
+import scala.concurrent.Future
+
 object MockSettingsDataStore {
   val failToken = "fails"
 }
 
-@deprecated("just don't use it. switching to EasyMock")
+@deprecated("just don't use it. switching to EasyMock", "blah")
 class MockSettingsDataStore extends SettingsDataStore {
 
   override def retrieveApplications(environment: String): DataStoreResult = {
@@ -20,10 +22,10 @@ class MockSettingsDataStore extends SettingsDataStore {
     }
   }
 
-  override def retrieveEnvironments(): DataStoreResult =
+  override def retrieveEnvironments(): Future[DataStoreResult] =
     settings.map(setting => setting.key.environment).distinct match {
-      case Nil => NotFound("environments")
-      case environments => Found[String]("global" +: environments)
+      case Nil => Future.successful(NotFound("environments"))
+      case environments => Future.successful(Found[String]("global" +: environments))
     }
 
   override def retrieveScopes(environment: String, application: String): DataStoreResult = {

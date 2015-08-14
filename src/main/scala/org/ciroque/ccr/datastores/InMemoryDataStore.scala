@@ -4,6 +4,8 @@ import org.ciroque.ccr.core.DataStoreResults.{NotFound, Found, DataStoreResult, 
 import org.ciroque.ccr.core.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 
+import scala.concurrent.Future
+
 class InMemoryDataStore extends SettingsDataStore {
 
   type ConfigurationList = List[Configuration]
@@ -57,11 +59,11 @@ class InMemoryDataStore extends SettingsDataStore {
   //    Failure("Not Implemented")
     DataStoreResults.Success()
 
-  override def retrieveEnvironments(): DataStoreResult = {
+  override def retrieveEnvironments(): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveEnvironments($environments)")
-    composeInterstitialResultOptionFor {
+    Future.successful(composeInterstitialResultOptionFor {
       environments.keys.toList
-    }
+    })
   }
 
   override def retrieveApplications(environment: String): DataStoreResult = {

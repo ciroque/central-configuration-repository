@@ -43,7 +43,7 @@ trait ConfigurationProviderService
     }
   }
 
-  def appRoute = pathPrefix(Commons.rootPath) {
+  def appRoute = path(Commons.rootPath) {
     pathEndOrSingleSlash {
       get {
         respondWithTeapot
@@ -54,7 +54,12 @@ trait ConfigurationProviderService
   def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get { ctx =>
-        completeInterstitialRoute(ctx, dataStore.retrieveEnvironments(), "No environments found.", list => EnvironmentGetResponse(list).toJson)
+        import scala.concurrent.ExecutionContext.Implicits.global
+        for {
+          result <- dataStore.retrieveEnvironments()
+        } yield {
+          completeInterstitialRoute(ctx, result, "No environments found.", list => EnvironmentGetResponse(list).toJson)
+        }
       }
     }
   }
