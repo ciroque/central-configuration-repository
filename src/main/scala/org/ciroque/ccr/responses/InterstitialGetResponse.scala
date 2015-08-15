@@ -2,12 +2,12 @@ package org.ciroque.ccr.responses
 
 import spray.json.DefaultJsonProtocol
 
-object EnvironmentGetResponse extends DefaultJsonProtocol {
-  implicit val EnvironmentGetResponseFormat = jsonFormat1(EnvironmentGetResponse.apply)
+object EnvironmentGetResponseProtocol extends DefaultJsonProtocol {
+  implicit val EnvironmentGetResponseFormat = jsonFormat1(EnvironmentGetResponse)
 }
 
-object ApplicationGetResponse extends DefaultJsonProtocol {
-  implicit val ApplicationGetResponseFormat = jsonFormat1(ApplicationGetResponse.apply)
+object ApplicationGetResponseProtocol extends DefaultJsonProtocol {
+  implicit val ApplicationGetResponseFormat = jsonFormat1(ApplicationGetResponse)
 }
 
 object ScopeGetResponse extends DefaultJsonProtocol {

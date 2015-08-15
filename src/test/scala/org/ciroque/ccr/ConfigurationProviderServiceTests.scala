@@ -27,7 +27,6 @@ class ConfigurationProviderServiceTests
 
   override def beforeEach() = {
     reset(dataStore)
-    println("dataStore has been reset")
   }
 
   describe("ConfigurationProviderService") {
@@ -78,7 +77,6 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
-            println(s">>>>> ${responseAs[String]}")
             responseAs[String] should include("environment")
             responseAs[String] should include(environment)
           }
@@ -88,7 +86,6 @@ class ConfigurationProviderServiceTests
   }
 
   private def verifyGetForPath(path: String = settingsPath, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
-
     expecting {
       retriever.andReturn(Future.successful(DataStoreResults.Found(listToReturn)))
     }

@@ -59,6 +59,7 @@ trait ConfigurationProviderService
         for {
           result <- dataStore.retrieveEnvironments()
         } yield {
+          import org.ciroque.ccr.responses.EnvironmentGetResponseProtocol._
           completeInterstitialRoute(ctx, result, "No environments found.", list => EnvironmentGetResponse(list).toJson)
         }
       }
@@ -69,6 +70,7 @@ trait ConfigurationProviderService
     environment =>
       pathEndOrSingleSlash {
         get { ctx =>
+          import org.ciroque.ccr.responses.ApplicationGetResponseProtocol._
           println(s"ConfigurationProviderService::environmentRoute")
           for {
             result <- dataStore.retrieveApplications(environment)
