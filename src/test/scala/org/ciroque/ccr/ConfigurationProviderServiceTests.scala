@@ -6,7 +6,8 @@ import org.ciroque.ccr.core.{DataStoreResults, Commons, SettingsDataStore}
 import org.easymock.EasyMock._
 import org.scalatest.mock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
-import spray.http.StatusCodes
+import spray.http.HttpHeaders.RawHeader
+import spray.http.{HttpHeader, StatusCodes}
 import spray.testkit.ScalatestRouteTest
 
 import scala.concurrent.Future
@@ -43,6 +44,7 @@ class ConfigurationProviderServiceTests
       it("should return a 418 I'm a Tea Pot on the root route") {
         Get("/") ~> routes ~> check {
           status should equal(Commons.teaPotStatusCode)
+          assertCorsHeaders(headers)
           responseAs[String] should include("/documentation")
           //          responseAs[RootResponse].message should include("please")
         }
@@ -51,6 +53,7 @@ class ConfigurationProviderServiceTests
       it("should return a 418 I'm a Tea Pot on the root app route") {
         Get(s"/${Commons.rootPath}") ~> routes ~> check {
           status should equal(Commons.teaPotStatusCode)
+          assertCorsHeaders(headers)
         }
       }
     }
@@ -82,6 +85,7 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
+            assertCorsHeaders(headers)
             responseAs[String] should include("environment")
             responseAs[String] should include(environment)
           }
@@ -95,6 +99,7 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment") ~> routes ~> check {
             status should equal(StatusCodes.OK)
+            assertCorsHeaders(headers)
             responseAs[String] should include("[]")
             responseAs[String] should include("applications")
           }
@@ -119,6 +124,7 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
+            assertCorsHeaders(headers)
             responseAs[String] should include("application")
             responseAs[String] should include(application)
           }
@@ -132,6 +138,7 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application") ~> routes ~> check {
             status should equal(StatusCodes.OK)
+            assertCorsHeaders(headers)
             responseAs[String] should include("[]")
             responseAs[String] should include("scopes")
           }
@@ -156,6 +163,7 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application/$scope") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
+            assertCorsHeaders(headers)
             responseAs[String] should include("scope")
             responseAs[String] should include(scope)
           }
@@ -169,12 +177,19 @@ class ConfigurationProviderServiceTests
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application/$scope") ~> routes ~> check {
             status should equal(StatusCodes.OK)
+            assertCorsHeaders(headers)
             responseAs[String] should include("[]")
             responseAs[String] should include("settings")
           }
         }
       }
     }
+  }
+
+  private def assertCorsHeaders(headers: List[HttpHeader]) = {
+    headers.contains(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
+    headers.contains(RawHeader("Access-Control-Allow-Methods", "GET"))
+    headers.contains(RawHeader("Access-Control-Allow-Origin", "*"))
   }
 
   private def verifyGetForPath(path: String = settingsPath, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
@@ -184,6 +199,7 @@ class ConfigurationProviderServiceTests
     whenExecuting(dataStore) {
       Get(path) ~> routes ~> check {
         status should equal(StatusCodes.OK)
+        assertCorsHeaders(headers)
         listToReturn.foreach { environment =>
           responseAs[String] should include(environment)
         }
