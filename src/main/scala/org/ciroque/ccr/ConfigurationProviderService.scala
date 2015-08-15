@@ -13,6 +13,7 @@ import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait ConfigurationProviderService
   extends HttpService
@@ -26,9 +27,10 @@ trait ConfigurationProviderService
                                         notFoundMessage: String,
                                         factory: List[String] => JsValue) = {
 
+    import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
     val (result, statusCode) = entities match {
       case Found(items: List[String]) => (factory(items).toString(), StatusCodes.OK)
-      case NotFound(key) => (JsString(s"No children of $key found.").toString(), StatusCodes.NotFound)
+      case NotFound(key, value) => (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson.toString, StatusCodes.NotFound)
       case Failure(message, cause) => (JsString("Something went horribly, horribly wrong.").toString(), StatusCodes.InternalServerError)
 
       case Success() => throw new UnsupportedOperationException("Success class is deprecated.")
@@ -54,7 +56,6 @@ trait ConfigurationProviderService
   def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get { ctx =>
-        import scala.concurrent.ExecutionContext.Implicits.global
         for {
           result <- dataStore.retrieveEnvironments()
         } yield {
@@ -69,11 +70,15 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           println(s"ConfigurationProviderService::environmentRoute")
-          completeInterstitialRoute(
-            ctx,
-            dataStore.retrieveApplications(environment),
-            s"environment '$environment' has no applications defined.",
-            list => ApplicationGetResponse(list).toJson)
+          for {
+            result <- dataStore.retrieveApplications(environment)
+          } yield {
+            completeInterstitialRoute(
+              ctx,
+              result,
+              s"environment '$environment' has no applications defined.",
+              list => ApplicationGetResponse(list).toJson)
+          }
         }
       }
   }
@@ -85,7 +90,7 @@ trait ConfigurationProviderService
           println(s"ConfigurationProviderService::applicationsRoute")
           completeInterstitialRoute(
             ctx,
-            dataStore.retrieveScopes(environment, application),
+            dataStore.retrieveScopes  (environment, application),
             s"application '$application' in environment '$environment' has no scopes defined.",
             list => ScopeGetResponse(list).toJson)
         }
@@ -116,8 +121,10 @@ trait ConfigurationProviderService
             respondWithHeaders(Commons.corsHeaders) {
               dataStore.retrieveConfiguration(environment, application, scope, setting) match {
 
-                case Found(list: List[ConfigurationFactory.Configuration]) => complete { SettingResponse(list) }
-                case NotFound(key: String) =>  respondWithStatus(StatusCodes.NotFound) {
+                case Found(list: List[ConfigurationFactory.Configuration]) => complete {
+                  SettingResponse(list)
+                }
+                case NotFound(key: String, value: String) => respondWithStatus(StatusCodes.NotFound) {
                   complete {
                     s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found"
                   }
@@ -141,8 +148,8 @@ trait ConfigurationProviderService
       respondWithHeaders(Commons.corsHeaders) {
         respondWithStatus(Commons.teaPotStatusCode) {
           complete {
-            import org.ciroque.ccr.responses.RootResponseProtocol.RootResponseFormat
-            RootResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
+            import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
+            HyperMediaMessageResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
           }
         }
       }

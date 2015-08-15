@@ -13,7 +13,8 @@ object DataStoreResults {
 
   case class Added[T](item: T) extends DataStoreResult
   case class Found[T](items: List[T]) extends DataStoreResult
-  case class NotFound(key: String) extends DataStoreResult
+  case class NotFound(key: String, value: String) extends DataStoreResult
+  case class NoChildrenFound(key: String) extends DataStoreResult
   case class Failure(message: String, cause: Throwable = null) extends DataStoreResult
 }
 
@@ -27,7 +28,7 @@ trait SettingsDataStore extends CcrTypes {
   def createScope(environment: String, application: String, scope: String): DataStoreResult
   def upsertConfiguration(environment: String, application: String, scope: String, setting: String, configuration: Configuration): DataStoreResult
 
-  def retrieveApplications(environment: String): DataStoreResult
+  def retrieveApplications(environment: String): Future[DataStoreResult]
   def retrieveEnvironments(): Future[DataStoreResult]
   def retrieveScopes(environment: String, application: String): DataStoreResult
   def retrieveSettings(environment: String, application: String, scope: String): DataStoreResult

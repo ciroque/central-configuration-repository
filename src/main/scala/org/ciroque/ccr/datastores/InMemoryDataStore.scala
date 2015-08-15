@@ -66,9 +66,9 @@ class InMemoryDataStore extends SettingsDataStore {
     })
   }
 
-  override def retrieveApplications(environment: String): DataStoreResult = {
+  override def retrieveApplications(environment: String): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveApplications($environment)")
-    composeInterstitialResultOptionFor(namesOf(applicationsIn(environment)))
+    Future.successful(composeInterstitialResultOptionFor(namesOf(applicationsIn(environment))))
   }
   
   override def retrieveScopes(environment: String, application: String): DataStoreResult = {
@@ -83,7 +83,7 @@ class InMemoryDataStore extends SettingsDataStore {
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): DataStoreResult = {
     println(s"InMemoryDataStore::retrieveConfiguration($environment, $application, $scope, $setting)")
-    NotFound(setting)
+    NotFound("configuration", setting)
   }
 
   private def applicationsIn(environment: String): ApplicationsMap = {
@@ -102,7 +102,7 @@ class InMemoryDataStore extends SettingsDataStore {
   
   private def composeInterstitialResultOptionFor(list: List[String]): DataStoreResult = {
     list match {
-      case Nil => NotFound("TBD")
+      case Nil => NotFound("TBD", "Unknown")
       case list: List[String] => Found(list)
     }
   }
