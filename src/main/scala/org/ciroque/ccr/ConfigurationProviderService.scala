@@ -24,16 +24,14 @@ trait ConfigurationProviderService
 
   private def completeInterstitialRoute(context: RequestContext,
                                         entities: DataStoreResult,
-                                        notFoundMessage: String,
                                         factory: List[String] => JsValue) = {
 
     import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
     val (result, statusCode) = entities match {
       case Found(items: List[String]) => (factory(items).toString(), StatusCodes.OK)
-      case NotFound(key, value) => (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson.toString, StatusCodes.NotFound)
+      case NotFound(key, value) => (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson.toString(), StatusCodes.NotFound)
+      case NoChildrenFound(key, value) => (factory(List()).toString(), StatusCodes.OK)
       case Failure(message, cause) => (JsString("Something went horribly, horribly wrong.").toString(), StatusCodes.InternalServerError)
-
-      case Success() => throw new UnsupportedOperationException("Success class is deprecated.")
     }
 
     context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result), Commons.corsHeaders))
@@ -60,7 +58,7 @@ trait ConfigurationProviderService
           result <- dataStore.retrieveEnvironments()
         } yield {
           import org.ciroque.ccr.responses.EnvironmentGetResponseProtocol._
-          completeInterstitialRoute(ctx, result, "No environments found.", list => EnvironmentGetResponse(list).toJson)
+          completeInterstitialRoute(ctx, result, list => EnvironmentGetResponse(list).toJson)
         }
       }
     }
@@ -78,7 +76,6 @@ trait ConfigurationProviderService
             completeInterstitialRoute(
               ctx,
               result,
-              s"environment '$environment' has no applications defined.",
               list => ApplicationGetResponse(list).toJson)
           }
         }
@@ -90,11 +87,14 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           println(s"ConfigurationProviderService::applicationsRoute")
-          completeInterstitialRoute(
-            ctx,
-            dataStore.retrieveScopes  (environment, application),
-            s"application '$application' in environment '$environment' has no scopes defined.",
-            list => ScopeGetResponse(list).toJson)
+          for {
+            result <- dataStore.retrieveScopes(environment, application)
+          } yield {
+            completeInterstitialRoute(
+              ctx,
+              result,
+              list => ScopeGetResponse(list).toJson)
+          }
         }
       }
   }
@@ -104,12 +104,15 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           println(s"ConfigurationProviderService::scopeRoute")
-          completeInterstitialRoute(
-            ctx,
-            dataStore.retrieveSettings(environment, application, scope),
-            s"scope '$scope' for application '$application' in environment '$environment' has no settings defined.",
-            list => SettingGetResponse(list).toJson
-          )
+          for {
+            result <- dataStore.retrieveSettings(environment, application, scope)
+          } yield {
+            completeInterstitialRoute(
+              ctx,
+              result,
+              list => SettingGetResponse(list).toJson
+            )
+          }
         }
       }
   }

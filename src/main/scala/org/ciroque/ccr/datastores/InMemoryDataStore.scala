@@ -71,14 +71,14 @@ class InMemoryDataStore extends SettingsDataStore {
     Future.successful(composeInterstitialResultOptionFor(namesOf(applicationsIn(environment))))
   }
   
-  override def retrieveScopes(environment: String, application: String): DataStoreResult = {
+  override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveScopes($environment, $application)")
-    composeInterstitialResultOptionFor(namesOf(scopesIn(environment, application)))
+    Future.successful(composeInterstitialResultOptionFor(namesOf(scopesIn(environment, application))))
   }
 
-  override def retrieveSettings(environment: String, application: String, scope: String): DataStoreResult = {
+  override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveSettings($environment, $application, $scope)")
-    composeInterstitialResultOptionFor(namesOf(settingsIn(environment, application, scope)))
+    Future.successful(composeInterstitialResultOptionFor(namesOf(settingsIn(environment, application, scope))))
   }
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): DataStoreResult = {
