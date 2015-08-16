@@ -7,4 +7,4 @@ object ConfigurationResponseProtocol extends DefaultJsonProtocol {
   implicit val SettingResponseFormat = jsonFormat1(ConfigurationResponse)
 }
 
-case class ConfigurationResponse(setting: List[Configuration]) extends CcrResponse
+case class ConfigurationResponse(configuration: List[Configuration]) extends CcrResponse

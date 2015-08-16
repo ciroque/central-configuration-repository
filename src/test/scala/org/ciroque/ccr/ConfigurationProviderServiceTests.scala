@@ -1,18 +1,19 @@
 package org.ciroque.ccr
 
-import javax.xml.bind.Unmarshaller
-
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.DataStoreResults.DataStoreResult
-import org.ciroque.ccr.core.{DataStoreResults, Commons, SettingsDataStore}
+import org.ciroque.ccr.core.{Commons, DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.responses.{ConfigurationResponse}
+import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
+import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse}
 import org.easymock.EasyMock._
 import org.joda.time.DateTime
 import org.scalatest.mock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{HttpHeader, StatusCodes}
+import spray.httpx.SprayJsonSupport._
 import spray.testkit.ScalatestRouteTest
 
 import scala.concurrent.Future
@@ -48,18 +49,22 @@ class ConfigurationProviderServiceTests
 
     describe("Non application routes") {
       it("should return a 418 I'm a Tea Pot on the root route") {
-        Get("/") ~> routes ~> check {
-          status should equal(Commons.teaPotStatusCode)
-          assertCorsHeaders(headers)
-          responseAs[String] should include("/documentation")
-          //          responseAs[RootResponse].message should include("please")
-        }
+        assertHyperMediaResponseOnRoots("/")
       }
 
       it("should return a 418 I'm a Tea Pot on the root app route") {
-        Get(s"/${Commons.rootPath}") ~> routes ~> check {
+        assertHyperMediaResponseOnRoots(s"/${Commons.rootPath}")
+      }
+
+      def assertHyperMediaResponseOnRoots(path: String) = {
+        Get(path) ~> routes ~> check {
           status should equal(Commons.teaPotStatusCode)
           assertCorsHeaders(headers)
+          val hyperMediaResponse = responseAs[HyperMediaMessageResponse]
+          hyperMediaResponse.message should include("Please review the documentation")
+          hyperMediaResponse._links.size should equal(1)
+          hyperMediaResponse._links.head._1 should equal("documentation")
+          hyperMediaResponse._links.head._2 should equal("/documentation")
         }
       }
     }
@@ -75,7 +80,6 @@ class ConfigurationProviderServiceTests
     }
 
     describe("application routes") {
-
       it("should return a list of applications given an environment") {
         verifyGetForPath(s"$settingsPath/$environment", dataStore.retrieveApplications(environment), applications)
       }
@@ -114,7 +118,6 @@ class ConfigurationProviderServiceTests
     }
 
     describe("scope routes") {
-
       it("should return a list of scopes given an environment and an application") {
         verifyGetForPath(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
       }
@@ -153,7 +156,6 @@ class ConfigurationProviderServiceTests
     }
 
     describe("settings routes") {
-
       it("should return a list of settings given an environment, an application, and a scope") {
         verifyGetForPath(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
       }
@@ -195,6 +197,7 @@ class ConfigurationProviderServiceTests
       val effectiveAt = DateTime.now().minusDays(30)
       val expiresAt = DateTime.now().plusDays(30)
       val ttl = 50000L
+      val settingUri = s"$settingsPath/$environment/$application/$scope/$setting"
       val configuration = ConfigurationFactory(
         environment,
         application,
@@ -204,20 +207,58 @@ class ConfigurationProviderServiceTests
         effectiveAt,
         expiresAt,
         ttl)
+
       it("returns the setting") {
+        assertConfigurationEndpoint(settingUri)
+      }
+
+      it("returns the setting with ending slash") {
+        assertConfigurationEndpoint(s"$settingUri/")
+      }
+
+      it("should return a 404 when the setting name is not found") {
         expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.Found(List(configuration))))
+          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NotFound("setting", setting)))
         }
         whenExecuting(dataStore) {
-          Get(s"$settingsPath/$environment/$application/$scope/$setting") ~> routes ~> check {
+          Get(settingUri) ~> routes ~> check {
+            status should equal(StatusCodes.NotFound)
+            assertCorsHeaders(headers)
+            val responseBody = responseAs[HyperMediaMessageResponse]
+            responseBody.message should include("was not found")
+            //            responseBody.message should include(environment)
+            //            responseBody.message should include(application)
+            //            responseBody.message should include(scope)
+            responseBody.message should include(setting)
+          }
+        }
+      }
+
+      it("should return an empty array when there is no configuration defined") {
+        expecting {
+          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NoChildrenFound("setting", setting)))
+        }
+        whenExecuting(dataStore) {
+          Get(settingUri) ~> routes ~> check {
             status should equal(StatusCodes.OK)
             assertCorsHeaders(headers)
-            import spray.httpx.SprayJsonSupport._
-            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
-            val conf = responseAs[ConfigurationResponse]
-            conf.setting.size should equal(1)
-            conf.setting.head.toJson.toString should equal(configuration.toJson.toString())
+            val responseBody = responseAs[ConfigurationResponse]
+            responseBody.configuration.size should equal(0)
+          }
+        }
+      }
 
+      def assertConfigurationEndpoint(uri: String): Unit = {
+        expecting {
+          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(futureSuccessfulDataStoreResult(List(configuration)))
+        }
+        whenExecuting(dataStore) {
+          Get(uri) ~> routes ~> check {
+            status should equal(StatusCodes.OK)
+            assertCorsHeaders(headers)
+            val conf = responseAs[ConfigurationResponse]
+            conf.configuration.size should equal(1)
+            conf.configuration.head.toJson.toString should equal(configuration.toJson.toString())
           }
         }
       }
@@ -228,6 +269,10 @@ class ConfigurationProviderServiceTests
     headers.contains(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
     headers.contains(RawHeader("Access-Control-Allow-Methods", "GET"))
     headers.contains(RawHeader("Access-Control-Allow-Origin", "*"))
+  }
+
+  private def futureSuccessfulDataStoreResult[T](items: List[T]) = {
+    Future.successful(DataStoreResults.Found(items))
   }
 
   private def verifyGetForPath(path: String = settingsPath, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
@@ -244,4 +289,5 @@ class ConfigurationProviderServiceTests
       }
     }
   }
+
 }
