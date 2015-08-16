@@ -1,9 +1,14 @@
 package org.ciroque.ccr
 
+import javax.xml.bind.Unmarshaller
+
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.core.{DataStoreResults, Commons, SettingsDataStore}
+import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.responses.{ConfigurationResponse}
 import org.easymock.EasyMock._
+import org.joda.time.DateTime
 import org.scalatest.mock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.HttpHeaders.RawHeader
@@ -34,6 +39,7 @@ class ConfigurationProviderServiceTests
     val environment = "global"
     val application = "application"
     val scope = "logging"
+    val setting = "log-level"
 
     val environments = List("global", "dev", "qa", "prod")
     val applications = List("web app", "service app", "mobile app")
@@ -180,6 +186,38 @@ class ConfigurationProviderServiceTests
             assertCorsHeaders(headers)
             responseAs[String] should include("[]")
             responseAs[String] should include("settings")
+          }
+        }
+      }
+    }
+
+    describe("configuration route") {
+      val effectiveAt = DateTime.now().minusDays(30)
+      val expiresAt = DateTime.now().plusDays(30)
+      val ttl = 50000L
+      val configuration = ConfigurationFactory(
+        environment,
+        application,
+        scope,
+        setting,
+        "DEBUG",
+        effectiveAt,
+        expiresAt,
+        ttl)
+      it("returns the setting") {
+        expecting {
+          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.Found(List(configuration))))
+        }
+        whenExecuting(dataStore) {
+          Get(s"$settingsPath/$environment/$application/$scope/$setting") ~> routes ~> check {
+            status should equal(StatusCodes.OK)
+            assertCorsHeaders(headers)
+            import spray.httpx.SprayJsonSupport._
+            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+            val conf = responseAs[ConfigurationResponse]
+            conf.setting.size should equal(1)
+            conf.setting.head.toJson.toString should equal(configuration.toJson.toString())
+
           }
         }
       }

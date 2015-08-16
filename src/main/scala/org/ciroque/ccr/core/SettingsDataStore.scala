@@ -32,5 +32,5 @@ trait SettingsDataStore extends CcrTypes {
   def retrieveEnvironments(): Future[DataStoreResult]
   def retrieveScopes(environment: String, application: String): Future[DataStoreResult]
   def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult]
-  def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): DataStoreResult
+  def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult]
 }

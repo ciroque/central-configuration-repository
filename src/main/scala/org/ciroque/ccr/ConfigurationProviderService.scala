@@ -8,12 +8,13 @@ import org.ciroque.ccr.core.{CcrTypes, Commons, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
-import spray.http.{HttpEntity, HttpResponse, StatusCodes}
+import spray.http.{StatusCode, HttpEntity, HttpResponse, StatusCodes}
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 
 trait ConfigurationProviderService
   extends HttpService
@@ -21,21 +22,6 @@ trait ConfigurationProviderService
 
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
-
-  private def completeInterstitialRoute(context: RequestContext,
-                                        entities: DataStoreResult,
-                                        factory: List[String] => JsValue) = {
-
-    import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
-    val (result, statusCode) = entities match {
-      case Found(items: List[String]) => (factory(items).toString(), StatusCodes.OK)
-      case NotFound(key, value) => (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson.toString(), StatusCodes.NotFound)
-      case NoChildrenFound(key, value) => (factory(List()).toString(), StatusCodes.OK)
-      case Failure(message, cause) => (JsString("Something went horribly, horribly wrong.").toString(), StatusCodes.InternalServerError)
-    }
-
-    context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result), Commons.corsHeaders))
-  }
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
@@ -118,42 +104,58 @@ trait ConfigurationProviderService
   }
 
   def settingRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
+
+
     (environment, application, scope, setting) =>
       pathEndOrSingleSlash {
-        get {
+        get { context =>
           println(s"ConfigurationProviderService::settingRoute")
-          respondWithMediaType(`application/json`) {
-            respondWithHeaders(Commons.corsHeaders) {
-              dataStore.retrieveConfiguration(environment, application, scope, setting) match {
-
-                case Found(list: List[ConfigurationFactory.Configuration]) => complete {
-                  SettingResponse(list)
-                }
-                case NotFound(key: String, value: String) => respondWithStatus(StatusCodes.NotFound) {
-                  complete {
-                    s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found"
-                  }
-                }
-                case Failure(msg, cause) => respondWithStatus(StatusCodes.InternalServerError) {
-                  complete {
-                    s"Something really bad happened."
-                  }
-                }
+          import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+          for {
+            dsr <- dataStore.retrieveConfiguration(environment, application, scope, setting)
+          } yield {
+            val (result, statusCode) = dsr match {
+              case Found(list: List[ConfigurationFactory.Configuration]) => (ConfigurationResponse(list).toJson.toString(), StatusCodes.OK)
+              case NotFound(key: String, value: String) =>
+                (new HyperMediaMessageResponse(
+                  s"setting '$setting' in scope '$scope' for application '$application' in environment '$environment' was not found", Map()).toJson.toString(),
+                  StatusCodes.NotFound)
+              case Failure(msg, cause) => {
+                (JsString(s"Something really bad happened.").toString(), StatusCodes.InternalServerError)
               }
             }
+
+            context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result), Commons.corsHeaders))
           }
+
         }
       }
   }
 
   def routes = defaultRoute ~ appRoute ~ environmentRoute ~ applicationsRoute ~ scopeRoute ~ settingRoute ~ rootRoute
 
+  private def completeInterstitialRoute(context: RequestContext,
+                                        entities: DataStoreResult,
+                                        factory: List[String] => JsValue) = {
+
+    val (result, statusCode) = entities match {
+      case Found(items: List[String]) => (factory(items).toString(), StatusCodes.OK)
+      case NotFound(key, value) => (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson.toString(), StatusCodes.NotFound)
+      case NoChildrenFound(key, value) => (factory(List()).toString(), StatusCodes.OK)
+      case Failure(message, cause) => (JsString("Something went horribly, horribly wrong.").toString(), StatusCodes.InternalServerError)
+    }
+
+    context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result), Commons.corsHeaders))
+  }
+
   private def respondWithTeapot: routing.Route = {
     respondWithMediaType(`application/json`) {
       respondWithHeaders(Commons.corsHeaders) {
         respondWithStatus(Commons.teaPotStatusCode) {
           complete {
+
             import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
+
             HyperMediaMessageResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
           }
         }

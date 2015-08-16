@@ -81,9 +81,9 @@ class InMemoryDataStore extends SettingsDataStore {
     Future.successful(composeInterstitialResultOptionFor(namesOf(settingsIn(environment, application, scope))))
   }
 
-  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): DataStoreResult = {
+  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveConfiguration($environment, $application, $scope, $setting)")
-    NotFound("configuration", setting)
+    Future.successful(NotFound("configuration", setting))
   }
 
   private def applicationsIn(environment: String): ApplicationsMap = {
