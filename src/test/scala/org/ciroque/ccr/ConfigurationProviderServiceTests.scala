@@ -6,7 +6,7 @@ import org.ciroque.ccr.core.{Commons, DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
-import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse}
+import org.ciroque.ccr.responses.{InternalServerErrorResponse, ConfigurationResponse, HyperMediaMessageResponse}
 import org.easymock.EasyMock._
 import org.joda.time.DateTime
 import org.scalatest.mock._
@@ -15,6 +15,7 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.{HttpHeader, StatusCodes}
 import spray.httpx.SprayJsonSupport._
 import spray.testkit.ScalatestRouteTest
+import spray.json._
 
 import scala.concurrent.Future
 
@@ -71,11 +72,19 @@ class ConfigurationProviderServiceTests
 
     describe("environment routes") {
       it("should return a list of environments") {
-        verifyGetForPath(settingsPath, dataStore.retrieveEnvironments, environments)
+        verifyGetForPath(settingsPath, dataStore.retrieveEnvironments(), environments)
       }
 
-      it("should return a list of environments when given an ending slash") {
-        verifyGetForPath(s"$settingsPath/", dataStore.retrieveEnvironments, environments)
+      it("should return a list of environments with a trailing slash") {
+        verifyGetForPath(s"$settingsPath/", dataStore.retrieveEnvironments(), environments)
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs") {
+        verifyGetWithDataStoreFailure(s"$settingsPath", dataStore.retrieveEnvironments())
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/", dataStore.retrieveEnvironments())
       }
     }
 
@@ -84,7 +93,7 @@ class ConfigurationProviderServiceTests
         verifyGetForPath(s"$settingsPath/$environment", dataStore.retrieveApplications(environment), applications)
       }
 
-      it("should return a list of applications given an environment when given an ending slash") {
+      it("should return a list of applications given an environment with a trailing slash") {
         verifyGetForPath(s"$settingsPath/$environment/", dataStore.retrieveApplications(environment), applications)
       }
 
@@ -115,6 +124,14 @@ class ConfigurationProviderServiceTests
           }
         }
       }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment", dataStore.retrieveApplications(environment))
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs with a trailing slash") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/", dataStore.retrieveApplications(environment))
+      }
     }
 
     describe("scope routes") {
@@ -122,7 +139,7 @@ class ConfigurationProviderServiceTests
         verifyGetForPath(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
       }
 
-      it("should return a list of scopes given an environment and an application when given an ending slash") {
+      it("should return a list of scopes given an environment and an application with a trailing slash") {
         verifyGetForPath(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
       }
 
@@ -140,7 +157,7 @@ class ConfigurationProviderServiceTests
         }
       }
 
-      it("should return an empty array when there are no scope in the given application") {
+      it("should return an empty array when there are no scopes in the given application") {
         expecting {
           dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NoChildrenFound("application", application)))
         }
@@ -153,6 +170,15 @@ class ConfigurationProviderServiceTests
           }
         }
       }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application))
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application))
+      }
+
     }
 
     describe("settings routes") {
@@ -160,7 +186,7 @@ class ConfigurationProviderServiceTests
         verifyGetForPath(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
       }
 
-      it("should return a list of scopes given an environment, an application, and a scope when given an ending slash") {
+      it("should return a list of settings given an environment, an application, and a scope with a trailing slash") {
         verifyGetForPath(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
       }
 
@@ -190,6 +216,14 @@ class ConfigurationProviderServiceTests
             responseAs[String] should include("settings")
           }
         }
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope))
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/", dataStore.retrieveSettings(environment, application, scope))
       }
     }
 
@@ -248,6 +282,14 @@ class ConfigurationProviderServiceTests
         }
       }
 
+      it("should respond with a 500 and general messaging when a DataStore failure occurs") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting))
+      }
+
+      it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
+        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting))
+      }
+
       def assertConfigurationEndpoint(uri: String): Unit = {
         expecting {
           dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(futureSuccessfulDataStoreResult(List(configuration)))
@@ -290,4 +332,21 @@ class ConfigurationProviderServiceTests
     }
   }
 
+  private def verifyGetWithDataStoreFailure(path: String, retriever: => Future[DataStoreResult]) = {
+    val errorMessage = "Mock Failure"
+    val cause = new Exception("The underlying data store was not available.")
+    expecting {
+      retriever.andReturn(Future.successful(DataStoreResults.Failure(errorMessage, cause)))
+    }
+    whenExecuting(dataStore) {
+      Get(path) ~> routes ~> check {
+        status should equal(StatusCodes.InternalServerError)
+        assertCorsHeaders(headers)
+        import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
+        val internalServerErrorResponse = responseAs[InternalServerErrorResponse]
+        internalServerErrorResponse.message should equal(errorMessage)
+        internalServerErrorResponse.cause should equal(cause.getMessage)
+      }
+    }
+  }
 }

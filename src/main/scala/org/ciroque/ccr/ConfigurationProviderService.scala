@@ -25,7 +25,7 @@ trait ConfigurationProviderService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  def defaultRoute = pathEndOrSingleSlash { 
+  def defaultRoute = pathEndOrSingleSlash {
     get {
       respondWithTeapot
     }
@@ -130,8 +130,10 @@ trait ConfigurationProviderService
     }
   }
 
-  private def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) =
-    (JsString("Something went horribly, horribly wrong."), StatusCodes.InternalServerError)
+  private def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) = {
+    import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
+    (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
+  }
 
   private def hyperMediaResponseFactory(key: String, value: String): (JsValue, StatusCode) =
     (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson, StatusCodes.NotFound)
