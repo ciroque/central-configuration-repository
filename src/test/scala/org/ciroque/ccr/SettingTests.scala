@@ -28,8 +28,8 @@ class SettingTests extends FunSpec with Matchers {
       def assertValue(map: Map[String, JsValue], key: String, expectedValue: JsValue) =
         map.get(key).map(actualValue => actualValue should equal( expectedValue))
 
-      val setting = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
-      val json = setting.toJson.asJsObject
+      val configuration = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
+      val json = configuration.toJson.asJsObject
 
       val fields = json.fields
       fields.keys should contain("key")
@@ -37,6 +37,8 @@ class SettingTests extends FunSpec with Matchers {
       fields.keys should contain("temporality")
 
       assertValue(fields, "value", JsString("1000000"))
+
+      configuration._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
       val keyFields = fields.get("key").get.asJsObject.fields
       keyFields.keys should contain("environment")
