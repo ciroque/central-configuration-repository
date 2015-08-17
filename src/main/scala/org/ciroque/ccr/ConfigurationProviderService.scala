@@ -114,7 +114,7 @@ trait ConfigurationProviderService
                                eventualDataStoreResult: Future[DataStoreResult],
                                foundFactory: List[T] => (JsValue, StatusCode),
                                notFoundFactory: (String, String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
-                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = failureResponseFactory) = {
+                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory) = {
 
     for {
       entities <- eventualDataStoreResult
@@ -126,13 +126,11 @@ trait ConfigurationProviderService
         case Failure(message, cause) => failureFactory(message, cause)
       }
 
-      context.complete(HttpResponse(statusCode, HttpEntity(`application/json`, result.toString()), Commons.corsHeaders))
+      context.complete(HttpResponse(
+        statusCode,
+        HttpEntity(`application/json`, result.toString()),
+        Commons.corsHeaders))
     }
-  }
-
-  private def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) = {
-    import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
-    (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
   }
 
   private def hyperMediaResponseFactory(key: String, value: String): (JsValue, StatusCode) =

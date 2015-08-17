@@ -1,7 +1,9 @@
 package org.ciroque.ccr.core
 
+import org.ciroque.ccr.responses.InternalServerErrorResponse
 import spray.http.HttpHeaders.RawHeader
-import spray.http.StatusCodes
+import spray.http.{StatusCode, StatusCodes}
+import spray.json._
 
 object Commons {
   val rootPath = "ccr"
@@ -16,6 +18,9 @@ object Commons {
     RawHeader("Access-Control-Allow-Headers", "Content-Type"),
     RawHeader("Access-Control-Allow-Methods", "GET,PUT")
   )
+
+  def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) = {
+    import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
+    (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
+  }
 }
-
-

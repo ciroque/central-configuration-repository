@@ -3,6 +3,7 @@ package org.ciroque.ccr
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.{Commons, DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.responses.ConfigurationResponse
 import org.joda.time.DateTime
 import org.scalatest.mock.EasyMockSugar
 import org.easymock.EasyMock._
@@ -44,8 +45,6 @@ class ConfigurationManagementServiceTests
       testTimeToLive
     )
 
-
-
     describe("configuration creation") {
       it("should return a 201 Created when creation is successful") {
         import org.ciroque.ccr.models.ConfigurationFactory._
@@ -56,7 +55,26 @@ class ConfigurationManagementServiceTests
         }
         whenExecuting(dataStore) {
           Post(s"$settingsPath/$testEnvironment/$testApplication/$testScope/$testSetting", testConfiguration) ~> routes ~> check {
+            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             status should equal(StatusCodes.OK)
+            val returnedConfiguration = responseAs[ConfigurationResponse]
+            returnedConfiguration.configuration.head.toJson should equal(testConfiguration.toJson)
+          }
+        }
+      }
+
+      it("should return a 500 Internal Server Error when there is a DataStore failure") {
+        import org.ciroque.ccr.models.ConfigurationFactory._
+        val expectedErrorMessage = "Bad Mojo"
+        val expectedThrowable = new Exception("The underlying data store experienced an error")
+        expecting {
+          dataStore
+            .upsertConfiguration(isA(classOf[Configuration]))
+            .andReturn(Future.successful(DataStoreResults.Failure(expectedErrorMessage, expectedThrowable)))
+        }
+        whenExecuting(dataStore) {
+          Post(s"$settingsPath/$testEnvironment/$testApplication/$testScope/$testSetting", testConfiguration) ~> routes ~> check {
+            status should equal(StatusCodes.InternalServerError)
           }
         }
       }
@@ -66,7 +84,7 @@ class ConfigurationManagementServiceTests
   override def beforeEach() =
     reset(dataStore)
 
-  override implicit val dataStore: SettingsDataStore = niceMock[SettingsDataStore]
+  override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
 
   override def actorRefFactory: ActorRefFactory = system
 }
