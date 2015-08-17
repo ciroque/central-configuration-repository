@@ -7,7 +7,7 @@ object Commons {
   val rootPath = "ccr"
 
   val settingsSegment = "settings"
-  val managementSegment = "management"
+  val managementSegment = "schedule"
 
   val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
 

@@ -14,7 +14,7 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore)
     override implicit val dataStore: SettingsDataStore = ds
   }
 
-  val configurationManagementService = new ConfigurationManagerService {
+  val configurationManagementService = new ConfigurationManagementService {
     override implicit def actorRefFactory: ActorRefFactory = context
     override implicit val dataStore: SettingsDataStore = ds
   }
