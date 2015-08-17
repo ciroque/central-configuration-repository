@@ -301,6 +301,7 @@ class ConfigurationProviderServiceTests
             val conf = responseAs[ConfigurationResponse]
             conf.configuration.size should equal(1)
             conf.configuration.head.toJson.toString should equal(configuration.toJson.toString())
+            conf.configuration.head._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
           }
         }
       }
