@@ -3,8 +3,9 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.core.DataStoreResults._
-import org.ciroque.ccr.core.{CcrTypes, Commons, SettingsDataStore}
+import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore, DataStoreResults}
+import DataStoreResults._
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses._
 import spray.http.MediaTypes._
@@ -61,7 +62,8 @@ trait ConfigurationProviderService
           completeRoute[String](
             ctx,
             dataStore.retrieveApplications(environment),
-            list => (ApplicationGetResponse(list).toJson, StatusCodes.OK))
+            list => (ApplicationGetResponse(list).toJson, StatusCodes.OK)
+          )
         }
       }
   }
@@ -74,7 +76,8 @@ trait ConfigurationProviderService
           completeRoute[String](
             ctx,
             dataStore.retrieveScopes(environment, application),
-            list => (ScopeGetResponse(list).toJson, StatusCodes.OK))
+            list => (ScopeGetResponse(list).toJson, StatusCodes.OK)
+          )
         }
       }
   }
@@ -87,7 +90,8 @@ trait ConfigurationProviderService
           completeRoute[String](
             ctx,
             dataStore.retrieveSettings(environment, application, scope),
-            list => (SettingGetResponse(list).toJson, StatusCodes.OK))
+            list => (SettingGetResponse(list).toJson, StatusCodes.OK)
+          )
         }
       }
   }
@@ -113,7 +117,7 @@ trait ConfigurationProviderService
   private def completeRoute[T](context: RequestContext,
                                eventualDataStoreResult: Future[DataStoreResult],
                                foundFactory: List[T] => (JsValue, StatusCode),
-                               notFoundFactory: (String, String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
+                               notFoundFactory: (String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
                                failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory) = {
 
     for {
@@ -121,8 +125,8 @@ trait ConfigurationProviderService
     } yield {
       val (result, statusCode) = entities match {
         case Found(items: List[T]) => foundFactory(items)
-        case NotFound(key, value) => notFoundFactory(key, value)
-        case NoChildrenFound(key, value) => foundFactory(List())
+        case NotFound(message) => notFoundFactory(message)
+//        case NoChildrenFound(key, value) => foundFactory(List())
         case Failure(message, cause) => failureFactory(message, cause)
       }
 
@@ -133,8 +137,8 @@ trait ConfigurationProviderService
     }
   }
 
-  private def hyperMediaResponseFactory(key: String, value: String): (JsValue, StatusCode) =
-    (new HyperMediaMessageResponse(s"$key '$value' was not found.", Map()).toJson, StatusCodes.NotFound)
+  private def hyperMediaResponseFactory(message: String): (JsValue, StatusCode) =
+    (new HyperMediaMessageResponse(message, Map()).toJson, StatusCodes.NotFound)
 
   private def respondWithTeapot: routing.Route = {
     respondWithMediaType(`application/json`) {

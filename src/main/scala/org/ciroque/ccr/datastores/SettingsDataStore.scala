@@ -1,6 +1,6 @@
-package org.ciroque.ccr.core
+package org.ciroque.ccr.datastores
 
-import org.ciroque.ccr.core.DataStoreResults.DataStoreResult
+import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 
 import scala.concurrent.Future
@@ -10,8 +10,7 @@ object DataStoreResults {
 
   case class Added[T](item: T) extends DataStoreResult
   case class Found[T](items: List[T]) extends DataStoreResult
-  case class NotFound(key: String, value: String) extends DataStoreResult
-  case class NoChildrenFound(key: String, value: String) extends DataStoreResult
+  case class NotFound(message: String) extends DataStoreResult
   case class Failure(message: String, cause: Throwable = null) extends DataStoreResult
 }
 

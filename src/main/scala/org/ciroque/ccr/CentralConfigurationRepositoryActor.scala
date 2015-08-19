@@ -1,7 +1,7 @@
 package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
-import org.ciroque.ccr.core.SettingsDataStore
+import org.ciroque.ccr.datastores.SettingsDataStore
 import spray.routing.HttpServiceActor
 
 class CentralConfigurationRepositoryActor(ds: SettingsDataStore)

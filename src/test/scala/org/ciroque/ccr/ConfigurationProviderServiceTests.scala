@@ -1,8 +1,9 @@
 package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
-import org.ciroque.ccr.core.DataStoreResults.DataStoreResult
-import org.ciroque.ccr.core.{Commons, DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.datastores.{SettingsDataStore, DataStoreResults}
+import DataStoreResults.DataStoreResult
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
@@ -99,7 +100,7 @@ class ConfigurationProviderServiceTests
 
       it("should return a 404 when the environment is not found") {
         expecting {
-          dataStore.retrieveApplications(environment).andReturn(Future.successful(DataStoreResults.NotFound("environment", environment)))
+          dataStore.retrieveApplications(environment).andReturn(Future.successful(DataStoreResults.NotFound(s"environment '$environment' was not found")))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment") ~> routes ~> check {
@@ -107,20 +108,6 @@ class ConfigurationProviderServiceTests
             assertCorsHeaders(headers)
             responseAs[String] should include("environment")
             responseAs[String] should include(environment)
-          }
-        }
-      }
-
-      it("should return an empty array when there are no applications in the given environment") {
-        expecting {
-          dataStore.retrieveApplications(environment).andReturn(Future.successful(DataStoreResults.NoChildrenFound("environment", environment)))
-        }
-        whenExecuting(dataStore) {
-          Get(s"$settingsPath/$environment") ~> routes ~> check {
-            status should equal(StatusCodes.OK)
-            assertCorsHeaders(headers)
-            responseAs[String] should include("[]")
-            responseAs[String] should include("applications")
           }
         }
       }
@@ -144,29 +131,15 @@ class ConfigurationProviderServiceTests
       }
 
       it("should return a 404 when the application is not found") {
+        val notFoundMessage: String = s"application '$application' was not found"
         expecting {
-          dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NotFound("application", application)))
+          dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
-            responseAs[String] should include("application")
-            responseAs[String] should include(application)
-          }
-        }
-      }
-
-      it("should return an empty array when there are no scopes in the given application") {
-        expecting {
-          dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NoChildrenFound("application", application)))
-        }
-        whenExecuting(dataStore) {
-          Get(s"$settingsPath/$environment/$application") ~> routes ~> check {
-            status should equal(StatusCodes.OK)
-            assertCorsHeaders(headers)
-            responseAs[String] should include("[]")
-            responseAs[String] should include("scopes")
+            responseAs[String] should include(notFoundMessage)
           }
         }
       }
@@ -191,29 +164,15 @@ class ConfigurationProviderServiceTests
       }
 
       it("should return a 404 when the scope is not found") {
+        val notFoundMessage: String = "scope '$scope' was not found"
         expecting {
-          dataStore.retrieveSettings(environment, application, scope).andReturn(Future.successful(DataStoreResults.NotFound("scope", scope)))
+          dataStore.retrieveSettings(environment, application, scope).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application/$scope") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
-            responseAs[String] should include("scope")
-            responseAs[String] should include(scope)
-          }
-        }
-      }
-
-      it("should return an empty array when there are no settings in the given scope") {
-        expecting {
-          dataStore.retrieveSettings(environment, application, scope).andReturn(Future.successful(DataStoreResults.NoChildrenFound("scope", scope)))
-        }
-        whenExecuting(dataStore) {
-          Get(s"$settingsPath/$environment/$application/$scope") ~> routes ~> check {
-            status should equal(StatusCodes.OK)
-            assertCorsHeaders(headers)
-            responseAs[String] should include("[]")
-            responseAs[String] should include("settings")
+            responseAs[String] should include(notFoundMessage)
           }
         }
       }
@@ -251,33 +210,20 @@ class ConfigurationProviderServiceTests
       }
 
       it("should return a 404 when the setting name is not found") {
+        val notFoundMessage: String = s"setting '$setting' was not found"
         expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NotFound("setting", setting)))
+          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(settingUri) ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
             val responseBody = responseAs[HyperMediaMessageResponse]
-            responseBody.message should include("was not found")
+            responseBody.message should include(notFoundMessage)
             //            responseBody.message should include(environment)
             //            responseBody.message should include(application)
             //            responseBody.message should include(scope)
             responseBody.message should include(setting)
-          }
-        }
-      }
-
-      it("should return an empty array when there is no configuration defined") {
-        expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NoChildrenFound("setting", setting)))
-        }
-        whenExecuting(dataStore) {
-          Get(settingUri) ~> routes ~> check {
-            status should equal(StatusCodes.OK)
-            assertCorsHeaders(headers)
-            val responseBody = responseAs[ConfigurationResponse]
-            responseBody.configuration.size should equal(0)
           }
         }
       }

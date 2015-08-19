@@ -3,8 +3,9 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.core.DataStoreResults._
-import org.ciroque.ccr.core.{Commons, SettingsDataStore}
+import org.ciroque.ccr.datastores.{SettingsDataStore, DataStoreResults}
+import DataStoreResults._
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.ciroque.ccr.responses.ConfigurationResponse

@@ -1,7 +1,8 @@
 package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
-import org.ciroque.ccr.core.{Commons, DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponse
 import org.joda.time.DateTime

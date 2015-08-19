@@ -16,7 +16,7 @@ libraryDependencies ++= {
     "io.spray"            %% "spray-routing"  % sprayVersion,
     "com.typesafe.akka"   %% "akka-actor"     % akkaVersion,
     "io.spray"            %% "spray-json"     % "1.3.0",
-    "org.mongodb"         %% "casbah"         % "2.8.1",
+    "org.mongodb"         %% "casbah"         % "2.8.2",
     "com.typesafe.akka"   %% "akka-testkit"   % akkaVersion   % "test",
     "io.spray"            %% "spray-testkit"  % sprayVersion  % "test",
     "org.scalatest"       %% "scalatest"      % "2.2.4"       % "test",
