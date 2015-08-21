@@ -2,6 +2,7 @@ package org.ciroque.ccr.datastores
 
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
@@ -38,7 +39,26 @@ class InMemorySettingsDataStore extends SettingsDataStore {
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
     println(s"InMemoryDataStore::retrieveConfiguration($environment, $application, $scope, $setting)")
-    Future.successful(NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found"))
+
+    val configs = applyFilter(
+      conf =>
+        (conf.key.environment == environment || conf.key.environment == "default")
+        && conf.key.application == application
+        && conf.key.scope == scope
+        && conf.key.setting == setting
+    )
+
+    def findActives = configs.filter(_.isActive)
+
+    val result = configs match {
+      case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
+      case _ => findActives match {
+        case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
+        case found: Seq[Configuration] => Found(found)
+      }
+    }
+
+    Future.successful(result)
   }
 
   private def allEnvironments() = {
@@ -68,12 +88,15 @@ class InMemorySettingsDataStore extends SettingsDataStore {
       conf => conf.key.setting)
   }
 
-  private def filteredMappedSorted(includedItems: (Configuration) => Boolean, mapping: (Configuration) => String): List[String] = {
-    configurations
-      .filter(includedItems)
+  private def filteredMappedSorted(include: (Configuration) => Boolean, mapping: (Configuration) => String): List[String] = {
+    applyFilter(include)
       .map(mapping)
       .distinct
       .sortBy(s => s)
+  }
+
+  private def applyFilter(include: (Configuration) => Boolean): List[Configuration] = {
+    configurations.filter(include)
   }
 
   private def composeInterstitialResultOptionFor(list: List[String], buildNotFoundMessage: () => String): DataStoreResult = {

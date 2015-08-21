@@ -1,15 +1,17 @@
 package org.ciroque.ccr.datastores
 
+import org.ciroque.ccr.datastores.DataStoreResults.{NotFound, Found}
 import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfterEach, BeforeAndAfter, FunSpec, Matchers}
+import org.scalatest._
 
 class InMemorySettingsDataStoreTests
   extends FunSpec
   with Matchers
   with ScalaFutures
-  with BeforeAndAfterEach {
+  with BeforeAndAfterAll {
 
   val testEnvironment = "test-environment"
   val testApplication = "test-application"
@@ -33,34 +35,48 @@ class InMemorySettingsDataStoreTests
     ttl
   )
 
+  val activeLogLevelConfiguration: Configuration = ConfigurationFactory("prod", "app3", "logging", "loglevel", "ALL", DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L)
+  val defaultLogRotationConfig: Configuration = ConfigurationFactory("default", "app4", "logging", "logrotation", "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
+
   val settingsDataStore = new InMemorySettingsDataStore()
 
-  override def beforeEach(): Unit = {
-    super.beforeEach()
+  override def beforeAll(): Unit = {
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("qa", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now(), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now(), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app2", "scope", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+
+    /* --- temporality --- */
+    settingsDataStore.upsertConfiguration(activeLogLevelConfiguration)
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app3", "logging", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app3", "logging", "logrotation", "24hours", DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
+
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app3", "logging", "loglevel", "DEBUG", DateTime.now().plusDays(8), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app3", "logging", "logfilename", "output.log", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app3", "logging", "logrotation", "24hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+
+    settingsDataStore.upsertConfiguration(defaultLogRotationConfig)
+    settingsDataStore.upsertConfiguration(ConfigurationFactory("prod", "app4", "logging", "logrotation", "24hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
   }
 
   describe("InMemorySettingsDataStore") {
@@ -72,10 +88,38 @@ class InMemorySettingsDataStoreTests
         }
       }
 
+      it("Returns a single, active configuration when given a valid path") {
+        whenReady(settingsDataStore.retrieveConfiguration("prod", "app3", "logging", "loglevel")) {
+          case Found(config) =>
+            config match {
+              case conf: List[Configuration] =>
+                conf.size should be(1)
+                conf.head should be(activeLogLevelConfiguration)
+                conf.head.isActive should be(true)
+              case something => fail(s"Expected to get a Configuration. Got a $something instead")
+            }
+          case NotFound(msg) => fail(s">>>>>>>>>>>>> $msg")
+        }
+      }
+
       it("Returns a NotFound when the environment / application / scope / setting combination does not exist") {
         whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment)) {
           result =>
             result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
+        }
+      }
+
+      it("Returns a NotFound when there is no active configuration") {
+        whenReady(settingsDataStore.retrieveConfiguration("dev", "app", "scope", "loglevel")) {
+          result =>
+            result should be(DataStoreResults.NotFound(s"environment 'dev' / application 'app' / scope 'scope' / setting 'loglevel' found no active configuration"))
+        }
+      }
+
+      it("Returns a default, if present, when no active configuration is present") {
+        whenReady(settingsDataStore.retrieveConfiguration("prod", "app4", "logging", "logrotation")) {
+          result =>
+            result should be(DataStoreResults.Found(Seq(defaultLogRotationConfig)))
         }
       }
     }
@@ -83,7 +127,7 @@ class InMemorySettingsDataStoreTests
     describe("environments") {
       it("Returns the correct environments") {
         whenReady(settingsDataStore.retrieveEnvironments()) { result =>
-          result should be(DataStoreResults.Found(List[String]("dev", "prod", "qa", testEnvironment).sortBy(s => s)))
+          result should be(DataStoreResults.Found(List[String]("default", "dev", "prod", "qa", testEnvironment).sortBy(s => s)))
         }
       }
     }

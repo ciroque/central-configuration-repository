@@ -7,6 +7,8 @@ import spray.json._
 
 object ConfigurationFactory extends DefaultJsonProtocol {
 
+  val DefaultEnvironment = "default"
+
   implicit object UuidJsonFormat extends JsonFormat[UUID] {
     def write(x: UUID) = JsString(x toString())
 
@@ -35,7 +37,17 @@ object ConfigurationFactory extends DefaultJsonProtocol {
 
   case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
 
-  case class Configuration(_id: UUID, key: Key, value: String, temporality: Temporality)
+  case class Configuration(_id: UUID, key: Key, value: String, temporality: Temporality) {
+    def isActive = {
+
+      def temporallyActive() = {
+        val now = DateTime.now()
+        now.isAfter(temporality.effectiveAt) && now.isBefore(temporality.expiresAt)
+      }
+
+      key.environment.toLowerCase == DefaultEnvironment || temporallyActive()
+    }
+  }
 
   def apply(environment: String,
             application: String,
