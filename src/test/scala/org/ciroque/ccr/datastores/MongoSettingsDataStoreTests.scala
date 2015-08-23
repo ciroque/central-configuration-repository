@@ -11,10 +11,6 @@ class MongoSettingsDataStoreTests
 
   override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)
 
-  override def beforeAll() = {
-    MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog).size
-  }
-
   override def afterAll() = {
     MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog).drop()
   }
