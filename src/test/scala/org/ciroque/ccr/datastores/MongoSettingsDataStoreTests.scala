@@ -1,6 +1,6 @@
 package org.ciroque.ccr.datastores
 
-import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.MongoClient
 import org.scalatest.BeforeAndAfterAll
 
 class MongoSettingsDataStoreTests
@@ -12,6 +12,6 @@ class MongoSettingsDataStoreTests
   override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)
 
   override def afterAll() = {
-    MongoConnection(settings.hostname, settings.port)(settings.databaseName)(settings.catalog).drop()
+    MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog).drop()
   }
 }

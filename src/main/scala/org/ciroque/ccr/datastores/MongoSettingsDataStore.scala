@@ -5,8 +5,8 @@ import java.util.UUID
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
-import com.mongodb.casbah.{MongoClient, MongoCollection, MongoConnection}
-import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound, DataStoreResult}
+import com.mongodb.casbah.{MongoClient, MongoCollection}
+import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
@@ -86,7 +86,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties) extends SettingsData
   private def executeInCollection(fx: (MongoCollection) => DataStoreResult): Future[DataStoreResult] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val collection = MongoConnection(settings.hostname, settings.port)(settings.databaseName)(settings.catalog)
+    val collection = MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog)
 
     Future(fx(collection)).recoverWith {
       case ex => Future.successful(DataStoreResults.Failure("FAILED", ex))
