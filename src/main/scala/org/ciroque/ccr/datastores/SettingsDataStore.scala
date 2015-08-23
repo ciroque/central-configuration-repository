@@ -5,19 +5,6 @@ import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 
 import scala.concurrent.Future
 
-object DataStoreResults {
-  trait DataStoreResult
-
-  case class Added[T](item: T) extends DataStoreResult
-  case class Found[T](items: Seq[T]) extends DataStoreResult
-  case class NotFound(message: String) extends DataStoreResult
-  case class Failure(message: String, cause: Throwable = null) extends DataStoreResult
-}
-
-trait CcrTypes {
-  type InterstitialResultOption = Option[List[String]]
-}
-
 trait SettingsDataStore extends CcrTypes {
   def upsertConfiguration(configuration: Configuration): Future[DataStoreResult]
 

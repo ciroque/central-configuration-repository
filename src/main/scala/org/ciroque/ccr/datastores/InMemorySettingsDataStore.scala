@@ -1,8 +1,8 @@
 package org.ciroque.ccr.datastores
 
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
-import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
@@ -42,7 +42,7 @@ class InMemorySettingsDataStore extends SettingsDataStore {
 
     val configs = applyFilter(
       conf =>
-        (conf.key.environment == environment || conf.key.environment == "default")
+        (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
         && conf.key.application == application
         && conf.key.scope == scope
         && conf.key.setting == setting

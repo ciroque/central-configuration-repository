@@ -56,12 +56,26 @@ object ConfigurationFactory extends DefaultJsonProtocol {
             value: String,
             effectiveAt: DateTime,
             expiresAt: DateTime,
-            ttl: Long) = {
+            ttl: Long): Configuration = {
+    apply(UUID.randomUUID(), environment, application, scope, setting, value, effectiveAt, expiresAt, ttl)
+  }
+
+  def apply(id: UUID,
+            environment: String,
+            application: String,
+            scope: String,
+            setting: String,
+            value: String,
+            effectiveAt: DateTime,
+            expiresAt: DateTime,
+            ttl: Long): Configuration = {
     new Configuration(
-      UUID.randomUUID(),
+      id,
       new Key(environment, application, scope, setting),
       value,
       new Temporality(effectiveAt, expiresAt, ttl)
     )
   }
+
+  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), "", Temporality(DateTime.now(), DateTime.now(), 0L))
 }
