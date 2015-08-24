@@ -97,7 +97,7 @@ abstract class SettingsDataStoreTests
             case conf: List[Configuration] =>
               conf.size should be(1)
               conf.head should be(activeLogLevelConfiguration)
-              conf.head.isActive should be true
+              conf.head.isActive should be(true)
             case something => fail(s"Expected to get a Configuration. Got a $something instead")
           }
         case NotFound(msg) => fail(s">>>>>>>>>>>>> $msg")
