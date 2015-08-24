@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Matchers, FunSpec}
 
-trait SettingsDataStoreTests
+abstract class SettingsDataStoreTests
   extends FunSpec
   with Matchers
   with ScalaFutures
@@ -41,6 +41,7 @@ trait SettingsDataStoreTests
   val defaultLogRotationConfig: Configuration = ConfigurationFactory("default", "app4", "logging", "logrotation", "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
 
   override def beforeAll(): Unit = {
+//    super.beforeAll()
 
     settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
     settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
