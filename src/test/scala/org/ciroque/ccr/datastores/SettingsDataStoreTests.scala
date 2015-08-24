@@ -4,7 +4,9 @@ import org.ciroque.ccr.datastores.DataStoreResults.{NotFound, Found}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.Span
 import org.scalatest.{BeforeAndAfterAll, Matchers, FunSpec}
 
 abstract class SettingsDataStoreTests
@@ -82,14 +84,14 @@ abstract class SettingsDataStoreTests
 
   describe("configurations") {
     it("Upserts a valid configuration") {
-      whenReady(settingsDataStore.upsertConfiguration(testConfiguration)) {
+      whenReady(settingsDataStore.upsertConfiguration(testConfiguration), Timeout(Span.Max)) {
         retrievedConfiguration =>
           retrievedConfiguration should be(DataStoreResults.Added(testConfiguration))
       }
     }
 
     it("Returns a single, active configuration when given a valid path") {
-      whenReady(settingsDataStore.retrieveConfiguration("prod", "app3", "logging", "loglevel")) {
+      whenReady(settingsDataStore.retrieveConfiguration("prod", "app3", "logging", "loglevel"), Timeout(Span.Max)) {
         case Found(config) =>
           config match {
             case conf: List[Configuration] =>
@@ -103,21 +105,21 @@ abstract class SettingsDataStoreTests
     }
 
     it("Returns a NotFound when the environment / application / scope / setting combination does not exist") {
-      whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment)) {
+      whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) {
         result =>
           result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
       }
     }
 
     it("Returns a NotFound when there is no active configuration") {
-      whenReady(settingsDataStore.retrieveConfiguration("dev", "app", "scope", "loglevel")) {
+      whenReady(settingsDataStore.retrieveConfiguration("dev", "app", "scope", "loglevel"), Timeout(Span.Max)) {
         result =>
           result should be(DataStoreResults.NotFound(s"environment 'dev' / application 'app' / scope 'scope' / setting 'loglevel' found no active configuration"))
       }
     }
 
     it("Returns a default, if present, when no active configuration is present") {
-      whenReady(settingsDataStore.retrieveConfiguration("prod", "app4", "logging", "logrotation")) {
+      whenReady(settingsDataStore.retrieveConfiguration("prod", "app4", "logging", "logrotation"), Timeout(Span.Max)) {
         result =>
           result should be(DataStoreResults.Found(Seq(defaultLogRotationConfig)))
       }
@@ -126,7 +128,7 @@ abstract class SettingsDataStoreTests
 
   describe("environments") {
     it("Returns the correct environments") {
-      whenReady(settingsDataStore.retrieveEnvironments()) { result =>
+      whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.Found(List[String]("default", "dev", "prod", "qa", testEnvironment).sortBy(s => s)))
       }
     }
@@ -134,13 +136,13 @@ abstract class SettingsDataStoreTests
 
   describe("applications") {
     it("Returns the correct applications") {
-      whenReady(settingsDataStore.retrieveApplications("dev")) { result =>
+      whenReady(settingsDataStore.retrieveApplications("dev"), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.Found(List[String]("app", "app2").sortBy(s => s)))
       }
     }
 
     it("Returns a NotFound when the given environment does not exist") {
-      whenReady(settingsDataStore.retrieveApplications(nonExistentSegment)) { result =>
+      whenReady(settingsDataStore.retrieveApplications(nonExistentSegment), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' was not found"))
       }
     }
@@ -148,13 +150,13 @@ abstract class SettingsDataStoreTests
 
   describe("scopes") {
     it("Returns the correct scopes") {
-      whenReady(settingsDataStore.retrieveScopes("dev", "app")) { result =>
+      whenReady(settingsDataStore.retrieveScopes("dev", "app"), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.Found(List[String]("scope")))
       }
     }
 
     it("Returns a NotFound when the given environment / application combination does not exist") {
-      whenReady(settingsDataStore.retrieveScopes(nonExistentSegment, nonExistentSegment)) { result =>
+      whenReady(settingsDataStore.retrieveScopes(nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' combination was not found"))
       }
     }
@@ -162,13 +164,13 @@ abstract class SettingsDataStoreTests
 
   describe("settings") {
     it("Returns the correct settings") {
-      whenReady(settingsDataStore.retrieveSettings("dev", "app", "scope")) { result =>
+      whenReady(settingsDataStore.retrieveSettings("dev", "app", "scope"), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.Found(List[String]("loglevel", "logfilename", "logrotation").sortBy(s => s)))
       }
     }
 
     it("Returns a NotFound when the given environment / application combination does not exist") {
-      whenReady(settingsDataStore.retrieveSettings(nonExistentSegment, nonExistentSegment, nonExistentSegment)) { result =>
+      whenReady(settingsDataStore.retrieveSettings(nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) { result =>
         result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' combination was not found"))
       }
     }
