@@ -25,8 +25,9 @@ class SettingTests extends FunSpec with Matchers {
 
     it("should be renderable to JSON") {
 
-      def assertValue(map: Map[String, JsValue], key: String, expectedValue: JsValue) =
-        map.get(key).map(actualValue => actualValue should equal( expectedValue))
+      def assertValue(map: Map[String, JsValue], key: String, expectedValue: JsValue) = {
+        map.get(key).foreach(actualValue => actualValue should equal(expectedValue))
+      }
 
       val configuration = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
       val json = configuration.toJson.asJsObject
