@@ -11,8 +11,8 @@ class RedisAccessStatsClient extends AccessStatsClient {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future {
       client.incr(s"CCR-QUERY:$environment:$application:$scope:$setting") match {
-        case Some(value) => println(s"INCREMENT WORKED: $value"); value
-        case None => println(s"SO SAD, FAIL"); -1
+        case Some(value) => value
+        case None => -1
       }
     }
   }
