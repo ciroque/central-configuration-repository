@@ -1,9 +1,9 @@
 package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
-import org.ciroque.ccr.datastores.{SettingsDataStore, DataStoreResults}
-import DataStoreResults.DataStoreResult
 import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
+import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
@@ -15,8 +15,9 @@ import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{HttpHeader, StatusCodes}
 import spray.httpx.SprayJsonSupport._
-import spray.testkit.ScalatestRouteTest
 import spray.json._
+import spray.testkit.ScalatestRouteTest
+import stats.AccessStatsClient
 
 import scala.concurrent.Future
 
@@ -29,6 +30,7 @@ class ConfigurationProviderServiceTests
   with EasyMockSugar {
 
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
+  override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
 
   override def actorRefFactory: ActorRefFactory = system
 
@@ -36,6 +38,7 @@ class ConfigurationProviderServiceTests
 
   override def beforeEach() = {
     reset(dataStore)
+    reset(accessStatsClient)
   }
 
   describe("ConfigurationProviderService") {
@@ -73,29 +76,29 @@ class ConfigurationProviderServiceTests
 
     describe("environment routes") {
       it("should return a list of environments") {
-        verifyGetForPath(settingsPath, dataStore.retrieveEnvironments(), environments)
+        verifyGetForPath("", dataStore.retrieveEnvironments(), environments)
       }
 
       it("should return a list of environments with a trailing slash") {
-        verifyGetForPath(s"$settingsPath/", dataStore.retrieveEnvironments(), environments)
+        verifyGetForPath("/", dataStore.retrieveEnvironments(), environments)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"$settingsPath", dataStore.retrieveEnvironments())
+        verifyGetWithDataStoreFailure("", dataStore.retrieveEnvironments())
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/", dataStore.retrieveEnvironments())
+        verifyGetWithDataStoreFailure("/", dataStore.retrieveEnvironments())
       }
     }
 
     describe("application routes") {
       it("should return a list of applications given an environment") {
-        verifyGetForPath(s"$settingsPath/$environment", dataStore.retrieveApplications(environment), applications)
+        verifyGetForPath(s"/$environment", dataStore.retrieveApplications(environment), applications)
       }
 
       it("should return a list of applications given an environment with a trailing slash") {
-        verifyGetForPath(s"$settingsPath/$environment/", dataStore.retrieveApplications(environment), applications)
+        verifyGetForPath(s"/$environment/", dataStore.retrieveApplications(environment), applications)
       }
 
       it("should return a 404 when the environment is not found") {
@@ -113,21 +116,21 @@ class ConfigurationProviderServiceTests
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment", dataStore.retrieveApplications(environment))
+        verifyGetWithDataStoreFailure(s"/$environment", dataStore.retrieveApplications(environment))
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with a trailing slash") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/", dataStore.retrieveApplications(environment))
+        verifyGetWithDataStoreFailure(s"/$environment/", dataStore.retrieveApplications(environment))
       }
     }
 
     describe("scope routes") {
       it("should return a list of scopes given an environment and an application") {
-        verifyGetForPath(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
+        verifyGetForPath(s"/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
       }
 
       it("should return a list of scopes given an environment and an application with a trailing slash") {
-        verifyGetForPath(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
+        verifyGetForPath(s"/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
       }
 
       it("should return a 404 when the application is not found") {
@@ -145,22 +148,22 @@ class ConfigurationProviderServiceTests
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application))
+        verifyGetWithDataStoreFailure(s"/$environment/$application", dataStore.retrieveScopes(environment, application))
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application", dataStore.retrieveScopes(environment, application))
+        verifyGetWithDataStoreFailure(s"/$environment/$application", dataStore.retrieveScopes(environment, application))
       }
 
     }
 
     describe("settings routes") {
       it("should return a list of settings given an environment, an application, and a scope") {
-        verifyGetForPath(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
+        verifyGetForPath(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
       }
 
       it("should return a list of settings given an environment, an application, and a scope with a trailing slash") {
-        verifyGetForPath(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
+        verifyGetForPath(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
       }
 
       it("should return a 404 when the scope is not found") {
@@ -178,11 +181,11 @@ class ConfigurationProviderServiceTests
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope))
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/", dataStore.retrieveSettings(environment, application, scope))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/", dataStore.retrieveSettings(environment, application, scope))
       }
     }
 
@@ -229,11 +232,11 @@ class ConfigurationProviderServiceTests
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting))
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
-        verifyGetWithDataStoreFailure(s"$settingsPath/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting))
       }
 
       def assertConfigurationEndpoint(uri: String): Unit = {
@@ -264,12 +267,32 @@ class ConfigurationProviderServiceTests
     Future.successful(DataStoreResults.Found(items))
   }
 
-  private def verifyGetForPath(path: String = settingsPath, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
+  private def splitPathToArray(path: String): List[String] = {
+    val segments = List("", "", "", "")
+
+    val cleaned = path
+      .substring(if (path.startsWith("/")) 1 else 0)
+      .split('/')
+      .toList
+
+    cleaned.length match {
+      case 4 => cleaned
+      case 3 => cleaned ++ segments.drop(3)
+      case 2 => cleaned ++ segments.drop(2)
+      case 1 => if(cleaned.head == "") segments
+      else cleaned ++ segments.drop(1)
+      case 0 => segments
+    }
+  }
+
+  private def verifyGetForPath(path: String, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
+    val pathAsList = splitPathToArray(path)
     expecting {
       retriever.andReturn(Future.successful(DataStoreResults.Found(listToReturn)))
+      accessStatsClient.recordQuery(pathAsList.head, pathAsList(1), pathAsList(2), pathAsList(3)).andReturn(Future.successful(1L))
     }
-    whenExecuting(dataStore) {
-      Get(path) ~> routes ~> check {
+    whenExecuting(dataStore, accessStatsClient) {
+      Get(s"$settingsPath$path") ~> routes ~> check {
         status should equal(StatusCodes.OK)
         assertCorsHeaders(headers)
         listToReturn.foreach { environment =>
@@ -286,7 +309,7 @@ class ConfigurationProviderServiceTests
       retriever.andReturn(Future.successful(DataStoreResults.Failure(errorMessage, cause)))
     }
     whenExecuting(dataStore) {
-      Get(path) ~> routes ~> check {
+      Get(s"$settingsPath$path") ~> routes ~> check {
         status should equal(StatusCodes.InternalServerError)
         assertCorsHeaders(headers)
         import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._

@@ -5,7 +5,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.{Matchers, FunSpec}
 import spray.json.{JsNumber, JsString, JsValue}
 
-class SettingTests extends FunSpec with Matchers {
+  class SettingTests extends FunSpec with Matchers {
 
   describe("Setting ") {
 

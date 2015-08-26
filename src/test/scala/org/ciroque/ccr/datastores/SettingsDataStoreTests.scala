@@ -33,7 +33,7 @@ abstract class SettingsDataStoreTests
     testApplication,
     testScope,
     testSetting,
-    testValue,
+      testValue,
     testEffectiveAt,
     testExpiresAt,
     ttl

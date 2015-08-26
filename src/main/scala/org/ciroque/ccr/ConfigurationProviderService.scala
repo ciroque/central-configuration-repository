@@ -14,6 +14,7 @@ import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
+import stats.AccessStatsClient
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 
@@ -25,6 +26,7 @@ trait ConfigurationProviderService
 
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
+  implicit val accessStatsClient: AccessStatsClient
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
@@ -44,7 +46,8 @@ trait ConfigurationProviderService
     pathEndOrSingleSlash {
       get { ctx =>
         import org.ciroque.ccr.responses.EnvironmentGetResponseProtocol._
-        println(s"ConfigurationProviderService::rootRLoute")
+        println(s"ConfigurationProviderService::rootRoute")
+        accessStatsClient.recordQuery("", "", "", "")
         completeRoute[String](
           ctx,
           dataStore.retrieveEnvironments(),
@@ -58,7 +61,8 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           import org.ciroque.ccr.responses.ApplicationGetResponseProtocol._
-          println(s"ConfigurationProviderService::environmentRoute")
+          println(s"ConfigurationProviderService::environmentRoute($environment)")
+          accessStatsClient.recordQuery(environment, "", "", "")
           completeRoute[String](
             ctx,
             dataStore.retrieveApplications(environment),
@@ -73,6 +77,7 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           println(s"ConfigurationProviderService::applicationsRoute")
+          accessStatsClient.recordQuery(environment, application, "", "")
           completeRoute[String](
             ctx,
             dataStore.retrieveScopes(environment, application),
@@ -87,6 +92,7 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctx =>
           println(s"ConfigurationProviderService::scopeRoute")
+          accessStatsClient.recordQuery(environment, application, scope, "")
           completeRoute[String](
             ctx,
             dataStore.retrieveSettings(environment, application, scope),
@@ -101,7 +107,7 @@ trait ConfigurationProviderService
       pathEndOrSingleSlash {
         get { ctxt =>
           println(s"ConfigurationProviderService::settingRoute")
-
+          accessStatsClient.recordQuery(environment, application, scope, setting)
           import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
           completeRoute[ConfigurationFactory.Configuration](
             ctxt,
@@ -126,7 +132,6 @@ trait ConfigurationProviderService
       val (result, statusCode) = entities match {
         case Found(items: List[T]) => foundFactory(items)
         case NotFound(message) => notFoundFactory(message)
-//        case NoChildrenFound(key, value) => foundFactory(List())
         case Failure(message, cause) => failureFactory(message, cause)
       }
 
