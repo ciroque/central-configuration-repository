@@ -36,4 +36,4 @@ packageDescription := "Central Configuration Repository"
 
 maintainer := "Steve Wagner <scalawagz@outlook.com>"
 
-name := "ccr"
+name := "central-configuration-repository"
