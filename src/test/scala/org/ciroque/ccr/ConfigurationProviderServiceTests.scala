@@ -7,7 +7,6 @@ import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
-import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse, InternalServerErrorResponse}
 import org.ciroque.ccr.stats.AccessStatsClient
 import org.easymock.EasyMock._
@@ -291,7 +290,7 @@ class ConfigurationProviderServiceTests
 
             val expiry = DateTime.parse(expiresHeader.head.value)
 
-            cacheUntil.minusMillis(cacheUntil.getMillisOfSecond) shouldEqual expiry.minusMillis(expiry.getMillisOfSecond)
+            cacheUntil.getMillis shouldBe (expiry.getMillis +- 50)
           }
         }
       }
