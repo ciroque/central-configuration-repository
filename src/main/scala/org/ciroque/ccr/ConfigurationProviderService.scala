@@ -3,21 +3,23 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore, DataStoreResults}
-import DataStoreResults._
 import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.datastores.DataStoreResults._
+import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 import org.ciroque.ccr.responses._
+import org.joda.time.{DateTime, DateTimeZone}
+import spray.http.HttpHeaders.RawHeader
 import spray.http.MediaTypes._
-import spray.http.{StatusCode, HttpEntity, HttpResponse, StatusCodes}
+import spray.http._
 import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
 import stats.AccessStatsClient
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 trait ConfigurationProviderService
@@ -109,10 +111,21 @@ trait ConfigurationProviderService
           println(s"ConfigurationProviderService::settingRoute")
           accessStatsClient.recordQuery(environment, application, scope, setting)
           import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+
+          def buildHeaders(configurations: List[ConfigurationFactory.Configuration]) = {
+            configurations match {
+              case Nil => Commons.corsHeaders
+              case _ => Commons.corsHeaders :+ RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusMillis(configurations.head.temporality.ttl.toInt).toString())
+            }
+          }
+
           completeRoute[ConfigurationFactory.Configuration](
             ctxt,
             dataStore.retrieveConfiguration(environment, application, scope, setting),
-            list => (ConfigurationResponse(list).toJson, StatusCodes.OK)
+            list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
+            hyperMediaResponseFactory,
+            Commons.failureResponseFactory,
+            dsr => buildHeaders(dsr)
           )
         }
       }
@@ -124,21 +137,22 @@ trait ConfigurationProviderService
                                eventualDataStoreResult: Future[DataStoreResult],
                                foundFactory: List[T] => (JsValue, StatusCode),
                                notFoundFactory: (String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
-                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory) = {
+                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory,
+                               generateHeader: (List[T]) => List[HttpHeaders.RawHeader] = (items: List[T]) => Commons.corsHeaders) = {
 
     for {
       entities <- eventualDataStoreResult
     } yield {
-      val (result, statusCode) = entities match {
-        case Found(items: List[T]) => foundFactory(items)
-        case NotFound(message) => notFoundFactory(message)
-        case Failure(message, cause) => failureFactory(message, cause)
+      val ((jsonResult, statusCode), listOfEntities) = entities match {
+        case Found(items: List[T]) => (foundFactory(items), items)
+        case NotFound(message) => (notFoundFactory(message), List())
+        case Failure(message, cause) => (failureFactory(message, cause), List())
       }
 
       context.complete(HttpResponse(
         statusCode,
-        HttpEntity(`application/json`, result.toString()),
-        Commons.corsHeaders))
+        HttpEntity(`application/json`, jsonResult.toString()),
+        generateHeader(listOfEntities)))
     }
   }
 

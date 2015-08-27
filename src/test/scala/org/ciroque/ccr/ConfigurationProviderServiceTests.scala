@@ -7,9 +7,9 @@ import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
-import org.ciroque.ccr.responses.{InternalServerErrorResponse, ConfigurationResponse, HyperMediaMessageResponse}
+import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse, InternalServerErrorResponse}
 import org.easymock.EasyMock._
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.mock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.HttpHeaders.RawHeader
@@ -31,7 +31,6 @@ class ConfigurationProviderServiceTests
 
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
   override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
-
   override def actorRefFactory: ActorRefFactory = system
 
   val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
@@ -192,7 +191,7 @@ class ConfigurationProviderServiceTests
     describe("configuration route") {
       val effectiveAt = DateTime.now().minusDays(30)
       val expiresAt = DateTime.now().plusDays(30)
-      val ttl = 50000L
+      val ttl = 1000 * 60 * 60 * 24  // 24 little hours
       val settingUri = s"$settingsPath/$environment/$application/$scope/$setting"
       val configuration = ConfigurationFactory(
         environment,
@@ -213,7 +212,7 @@ class ConfigurationProviderServiceTests
       }
 
       it("should return a 404 when the setting name is not found") {
-        val notFoundMessage: String = s"setting '$setting' was not found"
+        val notFoundMessage: String = s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found"
         expecting {
           dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
         }
@@ -223,9 +222,9 @@ class ConfigurationProviderServiceTests
             assertCorsHeaders(headers)
             val responseBody = responseAs[HyperMediaMessageResponse]
             responseBody.message should include(notFoundMessage)
-            //            responseBody.message should include(environment)
-            //            responseBody.message should include(application)
-            //            responseBody.message should include(scope)
+            responseBody.message should include(environment)
+            responseBody.message should include(application)
+            responseBody.message should include(scope)
             responseBody.message should include(setting)
           }
         }
@@ -251,6 +250,20 @@ class ConfigurationProviderServiceTests
             conf.configuration.size should equal(1)
             conf.configuration.head.toJson.toString should equal(configuration.toJson.toString())
             conf.configuration.head._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
+            val cacheUntil = DateTime.now(DateTimeZone.UTC).plusMillis(conf.configuration.head.temporality.ttl.toInt)
+
+            val expiresHeader = headers.filter(header => header.name == "Expires")
+            expiresHeader.size shouldEqual 1
+
+            val expiry = DateTime.parse(expiresHeader.head.value)
+
+            val one = cacheUntil.minusMillis(cacheUntil.getMillisOfSecond)
+            val two = expiry.minusMillis(expiry.getMillisOfSecond)
+
+            println(s"ONE($one)::TWO($two)::PRIME(${DateTime.now(DateTimeZone.UTC)}})")
+
+            one shouldEqual two
           }
         }
       }
@@ -258,9 +271,9 @@ class ConfigurationProviderServiceTests
   }
 
   private def assertCorsHeaders(headers: List[HttpHeader]) = {
-    headers.contains(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
-    headers.contains(RawHeader("Access-Control-Allow-Methods", "GET"))
-    headers.contains(RawHeader("Access-Control-Allow-Origin", "*"))
+    headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
+    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT"))
+    headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
   }
 
   private def futureSuccessfulDataStoreResult[T](items: List[T]) = {
@@ -279,8 +292,7 @@ class ConfigurationProviderServiceTests
       case 4 => cleaned
       case 3 => cleaned ++ segments.drop(3)
       case 2 => cleaned ++ segments.drop(2)
-      case 1 => if(cleaned.head == "") segments
-      else cleaned ++ segments.drop(1)
+      case 1 => if (cleaned.head == "") segments else cleaned ++ segments.drop(1)
       case 0 => segments
     }
   }
@@ -295,9 +307,7 @@ class ConfigurationProviderServiceTests
       Get(s"$settingsPath$path") ~> routes ~> check {
         status should equal(StatusCodes.OK)
         assertCorsHeaders(headers)
-        listToReturn.foreach { environment =>
-          responseAs[String] should include(environment)
-        }
+        listToReturn.foreach(segment => responseAs[String] should include(segment))
       }
     }
   }
