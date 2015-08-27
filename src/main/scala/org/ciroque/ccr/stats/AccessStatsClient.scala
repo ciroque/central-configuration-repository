@@ -1,4 +1,4 @@
-package stats
+package org.ciroque.ccr.stats
 
 import scala.concurrent.Future
 
