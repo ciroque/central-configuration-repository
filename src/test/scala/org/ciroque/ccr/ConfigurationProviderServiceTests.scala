@@ -4,10 +4,12 @@ import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse, InternalServerErrorResponse}
+import org.ciroque.ccr.stats.AccessStatsClient
 import org.easymock.EasyMock._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.mock._
@@ -17,7 +19,6 @@ import spray.http.{HttpHeader, StatusCodes}
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.testkit.ScalatestRouteTest
-import stats.AccessStatsClient
 
 import scala.concurrent.Future
 
@@ -33,11 +34,20 @@ class ConfigurationProviderServiceTests
   override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
   override def actorRefFactory: ActorRefFactory = system
 
+  override implicit val logger = new CachingLogger()
+
   val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
 
   override def beforeEach() = {
     reset(dataStore)
     reset(accessStatsClient)
+    logger.reset()
+  }
+
+  private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
+    logger.getEvents.size shouldBe 1
+    val logEvent = logger.getEvents.head
+    (name +: shouldInclude).foreach(expected => logEvent should include(expected))
   }
 
   describe("ConfigurationProviderService") {
@@ -76,28 +86,34 @@ class ConfigurationProviderServiceTests
     describe("environment routes") {
       it("should return a list of environments") {
         verifyGetForPath("", dataStore.retrieveEnvironments(), environments)
+        assertLogEvents("ConfigurationProviderService::environmentsRoute", 1)
       }
 
       it("should return a list of environments with a trailing slash") {
         verifyGetForPath("/", dataStore.retrieveEnvironments(), environments)
+        assertLogEvents("ConfigurationProviderService::environmentsRoute", 1)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
         verifyGetWithDataStoreFailure("", dataStore.retrieveEnvironments())
+        assertLogEvents("ConfigurationProviderService::environmentsRoute", 1)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
         verifyGetWithDataStoreFailure("/", dataStore.retrieveEnvironments())
+        assertLogEvents("ConfigurationProviderService::environmentsRoute", 1)
       }
     }
 
     describe("application routes") {
       it("should return a list of applications given an environment") {
         verifyGetForPath(s"/$environment", dataStore.retrieveApplications(environment), applications)
+        assertLogEvents("ConfigurationProviderService::applicationsRoute", 1, environment)
       }
 
       it("should return a list of applications given an environment with a trailing slash") {
         verifyGetForPath(s"/$environment/", dataStore.retrieveApplications(environment), applications)
+        assertLogEvents("ConfigurationProviderService::applicationsRoute", 1, environment)
       }
 
       it("should return a 404 when the environment is not found") {
@@ -112,24 +128,29 @@ class ConfigurationProviderServiceTests
             responseAs[String] should include(environment)
           }
         }
+        assertLogEvents("ConfigurationProviderService::applicationsRoute", 1, environment)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
         verifyGetWithDataStoreFailure(s"/$environment", dataStore.retrieveApplications(environment))
+        assertLogEvents("ConfigurationProviderService::applicationsRoute", 1, environment)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with a trailing slash") {
         verifyGetWithDataStoreFailure(s"/$environment/", dataStore.retrieveApplications(environment))
+        assertLogEvents("ConfigurationProviderService::applicationsRoute", 1, environment)
       }
     }
 
     describe("scope routes") {
       it("should return a list of scopes given an environment and an application") {
         verifyGetForPath(s"/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
+        assertLogEvents("ConfigurationProviderService::scopesRoute", 1, environment, application)
       }
 
       it("should return a list of scopes given an environment and an application with a trailing slash") {
         verifyGetForPath(s"/$environment/$application", dataStore.retrieveScopes(environment, application), scopes)
+        assertLogEvents("ConfigurationProviderService::scopesRoute", 1, environment, application)
       }
 
       it("should return a 404 when the application is not found") {
@@ -144,25 +165,29 @@ class ConfigurationProviderServiceTests
             responseAs[String] should include(notFoundMessage)
           }
         }
+        assertLogEvents("ConfigurationProviderService::scopesRoute", 1, environment, application)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
         verifyGetWithDataStoreFailure(s"/$environment/$application", dataStore.retrieveScopes(environment, application))
+        assertLogEvents("ConfigurationProviderService::scopesRoute", 1, environment, application)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
         verifyGetWithDataStoreFailure(s"/$environment/$application", dataStore.retrieveScopes(environment, application))
+        assertLogEvents("ConfigurationProviderService::scopesRoute", 1, environment, application)
       }
-
     }
 
     describe("settings routes") {
       it("should return a list of settings given an environment, an application, and a scope") {
         verifyGetForPath(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
+        assertLogEvents("ConfigurationProviderService::settingsRoute", 1, environment, application, scope)
       }
 
       it("should return a list of settings given an environment, an application, and a scope with a trailing slash") {
         verifyGetForPath(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope), settings)
+        assertLogEvents("ConfigurationProviderService::settingsRoute", 1, environment, application, scope)
       }
 
       it("should return a 404 when the scope is not found") {
@@ -177,21 +202,24 @@ class ConfigurationProviderServiceTests
             responseAs[String] should include(notFoundMessage)
           }
         }
+        assertLogEvents("ConfigurationProviderService::settingsRoute", 1, environment, application, scope)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
         verifyGetWithDataStoreFailure(s"/$environment/$application/$scope", dataStore.retrieveSettings(environment, application, scope))
+        assertLogEvents("ConfigurationProviderService::settingsRoute", 1, environment, application, scope)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
         verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/", dataStore.retrieveSettings(environment, application, scope))
+        assertLogEvents("ConfigurationProviderService::settingsRoute", 1, environment, application, scope)
       }
     }
 
     describe("configuration route") {
       val effectiveAt = DateTime.now().minusDays(30)
       val expiresAt = DateTime.now().plusDays(30)
-      val ttl = 1000 * 60 * 60 * 24  // 24 little hours
+      val ttl = 1000 * 60 * 60 * 24 // 24 little hours
       val settingUri = s"$settingsPath/$environment/$application/$scope/$setting"
       val configuration = ConfigurationFactory(
         environment,
@@ -203,12 +231,14 @@ class ConfigurationProviderServiceTests
         expiresAt,
         ttl)
 
-      it("returns the setting") {
+      it("returns the configuration") {
         assertConfigurationEndpoint(settingUri)
+        assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
-      it("returns the setting with ending slash") {
+      it("returns the configuration with ending slash") {
         assertConfigurationEndpoint(s"$settingUri/")
+        assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       it("should return a 404 when the setting name is not found") {
@@ -228,14 +258,17 @@ class ConfigurationProviderServiceTests
             responseBody.message should include(setting)
           }
         }
+        assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
         verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
         verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       def assertConfigurationEndpoint(uri: String): Unit = {

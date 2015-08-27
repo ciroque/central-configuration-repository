@@ -12,7 +12,8 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       val implicitLoggerName: String = "IMPLICIT_LOGGING_TESTING"
       withImplicitLogging(implicitLoggerName) {
         implicit val logger = mockLogger
-        println(s"This is something for the logger to test")
+
+        ()
 
         addValue("Value1", "TheValueOfOne")
       }

@@ -16,30 +16,24 @@ class InMemorySettingsDataStore extends SettingsDataStore {
   }
 
   override def retrieveEnvironments(): Future[DataStoreResult] = {
-    println(s"InMemoryDataStore::retrieveEnvironments()")
     Future.successful(
       composeInterstitialResultOptionFor(allEnvironments(), () => "")
     )
   }
 
   override def retrieveApplications(environment: String): Future[DataStoreResult] = {
-    println(s"InMemoryDataStore::retrieveApplications($environment)")
     Future.successful(composeInterstitialResultOptionFor(applicationsIn(environment), () => s"environment '$environment' was not found"))
   }
 
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
-    println(s"InMemoryDataStore::retrieveScopes($environment, $application)")
     Future.successful(composeInterstitialResultOptionFor(scopesIn(environment, application), () => s"environment '$environment' / application '$application' combination was not found"))
   }
 
   override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
-    println(s"InMemoryDataStore::retrieveSettings($environment, $application, $scope)")
     Future.successful(composeInterstitialResultOptionFor(settingsIn(environment, application, scope), () => s"environment '$environment' / application '$application' / scope '$scope' combination was not found"))
   }
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
-    println(s"InMemoryDataStore::retrieveConfiguration($environment, $application, $scope, $setting)")
-
     val configs = applyFilter(
       conf =>
         (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)

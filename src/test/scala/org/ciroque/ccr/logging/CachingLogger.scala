@@ -6,9 +6,15 @@ import org.slf4j.{Marker, Logger}
 
 class CachingLogger extends Logger {
 
+  private def asListOfStrings = cache.toArray(new Array[String](cache.size())).toList
+
+  def printLog(): Unit = println(asListOfStrings mkString "\n")
+
+  def reset(): Unit = cache.clear()
+
   private val cache: ConcurrentLinkedQueue[String] = new ConcurrentLinkedQueue[String]()
 
-  def getEvents: List[String] = cache.toArray(new Array[String](cache.size())).toList
+  def getEvents: List[String] = asListOfStrings
 
   override def getName: String = "CachingLogger"
 

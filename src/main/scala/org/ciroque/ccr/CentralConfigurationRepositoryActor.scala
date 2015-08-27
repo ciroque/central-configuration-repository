@@ -2,6 +2,7 @@ package org.ciroque.ccr
 
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.datastores.SettingsDataStore
+import org.slf4j.LoggerFactory
 import spray.routing.HttpServiceActor
 import stats.AccessStatsClient
 
@@ -14,6 +15,7 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
     override implicit def actorRefFactory: ActorRefFactory = context
     override implicit val dataStore: SettingsDataStore = ds
     override implicit val accessStatsClient = asc
+    override implicit val logger = LoggerFactory.getLogger(classOf[ConfigurationProviderService])
   }
 
   val configurationManagementService = new ConfigurationManagementService {

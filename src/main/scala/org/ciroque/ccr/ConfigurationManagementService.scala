@@ -23,7 +23,6 @@ trait ConfigurationManagementService
 
   def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) =>
-      println(s"ConfigurationManagerService::settingUpsertRoute($environment, $application, $scope, $setting)")
       pathEndOrSingleSlash {
         requestUri { uri =>
           import spray.httpx.SprayJsonSupport._

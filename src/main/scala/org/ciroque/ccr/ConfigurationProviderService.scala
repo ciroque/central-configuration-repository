@@ -9,7 +9,9 @@ import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 import org.ciroque.ccr.responses._
+import org.ciroque.ccr.stats.AccessStatsClient
 import org.joda.time.{DateTime, DateTimeZone}
+import org.slf4j.Logger
 import spray.http.HttpHeaders.RawHeader
 import spray.http.MediaTypes._
 import spray.http._
@@ -17,7 +19,7 @@ import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
-import stats.AccessStatsClient
+import logging.ImplicitLogging._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -29,6 +31,7 @@ trait ConfigurationProviderService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
   implicit val accessStatsClient: AccessStatsClient
+  implicit val logger: Logger
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
@@ -44,73 +47,70 @@ trait ConfigurationProviderService
     }
   }
 
-  def rootRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
+  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get { ctx =>
         import org.ciroque.ccr.responses.EnvironmentGetResponseProtocol._
-        println(s"ConfigurationProviderService::rootRoute")
-        accessStatsClient.recordQuery("", "", "", "")
-        completeRoute[String](
-          ctx,
-          dataStore.retrieveEnvironments(),
-          list => (EnvironmentGetResponse(list).toJson, StatusCodes.OK))
+        withImplicitLoggingAndStats("ConfigurationProviderService::environmentsRoute", "", "", "", "") {
+          completeRoute[String](
+            ctx,
+            dataStore.retrieveEnvironments(),
+            list => (EnvironmentGetResponse(list).toJson, StatusCodes.OK))
+        }
       }
     }
   }
 
-  def environmentRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment) {
+  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment) {
     environment =>
       pathEndOrSingleSlash {
         get { ctx =>
           import org.ciroque.ccr.responses.ApplicationGetResponseProtocol._
-          println(s"ConfigurationProviderService::environmentRoute($environment)")
-          accessStatsClient.recordQuery(environment, "", "", "")
-          completeRoute[String](
-            ctx,
-            dataStore.retrieveApplications(environment),
-            list => (ApplicationGetResponse(list).toJson, StatusCodes.OK)
-          )
+          withImplicitLoggingAndStats("ConfigurationProviderService::applicationsRoute", environment, "", "", "") {
+            completeRoute[String](
+              ctx,
+              dataStore.retrieveApplications(environment),
+              list => (ApplicationGetResponse(list).toJson, StatusCodes.OK)
+            )
+          }
         }
       }
   }
 
-  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
+  def scopesRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
     (environment, application) =>
       pathEndOrSingleSlash {
         get { ctx =>
-          println(s"ConfigurationProviderService::applicationsRoute")
-          accessStatsClient.recordQuery(environment, application, "", "")
-          completeRoute[String](
-            ctx,
-            dataStore.retrieveScopes(environment, application),
-            list => (ScopeGetResponse(list).toJson, StatusCodes.OK)
-          )
+          withImplicitLoggingAndStats("ConfigurationProviderService::scopesRoute", environment, application, "", "") {
+            completeRoute[String](
+              ctx,
+              dataStore.retrieveScopes(environment, application),
+              list => (ScopeGetResponse(list).toJson, StatusCodes.OK)
+            )
+          }
         }
       }
   }
 
-  def scopeRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
+  def settingsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
       pathEndOrSingleSlash {
         get { ctx =>
-          println(s"ConfigurationProviderService::scopeRoute")
-          accessStatsClient.recordQuery(environment, application, scope, "")
-          completeRoute[String](
-            ctx,
-            dataStore.retrieveSettings(environment, application, scope),
-            list => (SettingGetResponse(list).toJson, StatusCodes.OK)
-          )
+          withImplicitLoggingAndStats("ConfigurationProviderService::settingsRoute", environment, application, scope, "") {
+            completeRoute[String](
+              ctx,
+              dataStore.retrieveSettings(environment, application, scope),
+              list => (SettingGetResponse(list).toJson, StatusCodes.OK)
+            )
+          }
         }
       }
   }
 
-  def settingRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
+  def configurationRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) =>
       pathEndOrSingleSlash {
         get { ctxt =>
-          println(s"ConfigurationProviderService::settingRoute")
-          accessStatsClient.recordQuery(environment, application, scope, setting)
-          import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 
           def buildHeaders(configurations: List[ConfigurationFactory.Configuration]) = {
             configurations match {
@@ -119,19 +119,23 @@ trait ConfigurationProviderService
             }
           }
 
-          completeRoute[ConfigurationFactory.Configuration](
-            ctxt,
-            dataStore.retrieveConfiguration(environment, application, scope, setting),
-            list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
-            hyperMediaResponseFactory,
-            Commons.failureResponseFactory,
-            dsr => buildHeaders(dsr)
-          )
+          withImplicitLoggingAndStats("ConfigurationProviderService::configurationRoute", environment, application, scope, setting) {
+            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+
+            completeRoute[ConfigurationFactory.Configuration](
+              ctxt,
+              dataStore.retrieveConfiguration(environment, application, scope, setting),
+              list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
+              hyperMediaResponseFactory,
+              Commons.failureResponseFactory,
+              dsr => buildHeaders(dsr)
+            )
+          }
         }
       }
   }
 
-  def routes = rootRoute ~ defaultRoute ~ appRoute ~ environmentRoute ~ applicationsRoute ~ scopeRoute ~ settingRoute
+  def routes = defaultRoute ~ appRoute ~ environmentsRoute ~ applicationsRoute ~ scopesRoute ~ settingsRoute ~ configurationRoute
 
   private def completeRoute[T](context: RequestContext,
                                eventualDataStoreResult: Future[DataStoreResult],
@@ -169,6 +173,22 @@ trait ConfigurationProviderService
           }
         }
       }
+    }
+  }
+
+  private def withImplicitLoggingAndStats[T](
+    name: String,
+    environment: String,
+    application: String,
+    scope: String,
+    setting: String)(fx: => T) = {
+
+    accessStatsClient.recordQuery(environment, application, scope, setting)
+    val values = Map("environment" -> environment, "application" -> application, "scope" -> scope, "setting" -> setting)
+
+    withImplicitLogging(name) {
+      values.filter(thing => thing._2 != "").map(thing => addValue(thing._1, thing._2))
+      fx
     }
   }
 }
