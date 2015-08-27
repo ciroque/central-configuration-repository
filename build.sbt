@@ -2,7 +2,7 @@ import com.typesafe.sbt.SbtNativePackager._
 
 organization  := "org.ciroque"
 
-version       := "0.1"
+version       := "0.4"
 
 scalaVersion  := "2.11.6"
 
@@ -22,7 +22,8 @@ libraryDependencies ++= {
     "org.scalatest"       %% "scalatest"      % "2.2.4"       % "test",
     "org.specs2"          %% "specs2-core"    % "2.3.11"      % "test",
     "org.easymock"        %  "easymock"       % "3.2"         % "test",
-    "net.debasishg"       %% "redisclient"    % "3.0"
+    "net.debasishg"       %% "redisclient"    % "3.0",
+    "ch.qos.logback"      % "logback-classic" % "1.1.3"       % "runtime"
   )
 }
 
