@@ -4,6 +4,7 @@ import java.util.UUID
 
 import org.joda.time.DateTime
 import spray.json._
+import org.ciroque.ccr.core.CommonJsonFormatters._
 
 object ConfigurationFactory extends DefaultJsonProtocol {
 
@@ -16,17 +17,6 @@ object ConfigurationFactory extends DefaultJsonProtocol {
       case JsString(x) => UUID.fromString(x)
       case x => deserializationError("Expected UUID as JsString, but got " + x)
     }
-  }
-
-  implicit object DateTimeFormatter extends RootJsonFormat[DateTime] {
-    override def read(json: JsValue): DateTime = {
-      json match {
-        case JsString(string) => DateTime.parse(string)
-        case _ => throw new IllegalArgumentException("WTF")
-      }
-    }
-
-    override def write(obj: DateTime): JsValue = JsString(obj.toString())
   }
 
   implicit val KeyResponseFormat = jsonFormat4(Key.apply)
