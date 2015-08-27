@@ -258,12 +258,7 @@ class ConfigurationProviderServiceTests
 
             val expiry = DateTime.parse(expiresHeader.head.value)
 
-            val one = cacheUntil.minusMillis(cacheUntil.getMillisOfSecond)
-            val two = expiry.minusMillis(expiry.getMillisOfSecond)
-
-            println(s"ONE($one)::TWO($two)::PRIME(${DateTime.now(DateTimeZone.UTC)}})")
-
-            one shouldEqual two
+            cacheUntil.minusMillis(cacheUntil.getMillisOfSecond) shouldEqual expiry.minusMillis(expiry.getMillisOfSecond)
           }
         }
       }
