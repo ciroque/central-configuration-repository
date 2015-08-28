@@ -4,6 +4,7 @@ import org.joda.time.DateTime
 import spray.json.{JsString, JsValue, RootJsonFormat}
 
 object CommonJsonFormatters {
+
   implicit object DateTimeFormatter extends RootJsonFormat[DateTime] {
     override def read(json: JsValue): DateTime = {
       json match {
@@ -14,4 +15,5 @@ object CommonJsonFormatters {
 
     override def write(obj: DateTime): JsValue = JsString(obj.toString())
   }
+
 }

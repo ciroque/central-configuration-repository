@@ -5,13 +5,13 @@ import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponse
+import org.easymock.EasyMock._
 import org.joda.time.DateTime
 import org.scalatest.mock.EasyMockSugar
-import org.easymock.EasyMock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.StatusCodes
-import spray.testkit.ScalatestRouteTest
 import spray.httpx.SprayJsonSupport._
+import spray.testkit.ScalatestRouteTest
 
 import scala.concurrent.Future
 

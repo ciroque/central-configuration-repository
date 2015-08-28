@@ -42,7 +42,7 @@ object ImplicitLogging {
     }
 
     def buildAsJson(name: String, started: DateTime, ended: DateTime): JsValue = {
-      import LogEntryProtocol._
+      import org.ciroque.ccr.logging.ImplicitLogging.LogEntryProtocol._
       build(name, started, ended).toJson
     }
   }

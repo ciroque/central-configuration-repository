@@ -1,6 +1,6 @@
 package org.ciroque.ccr.responses
 
-import spray.json.{JsObject, DefaultJsonProtocol}
+import spray.json.{DefaultJsonProtocol, JsObject}
 
 object HyperMediaResponseProtocol extends DefaultJsonProtocol {
   implicit val HyperMediaMessageResponseFormat = jsonFormat2(HyperMediaMessageResponse)
@@ -8,4 +8,5 @@ object HyperMediaResponseProtocol extends DefaultJsonProtocol {
 }
 
 case class HyperMediaMessageResponse(message: String, _links: Map[String, String])
+
 case class HyperMediaObjectResponse(message: JsObject, _links: Map[String, String])

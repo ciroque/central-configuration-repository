@@ -2,7 +2,7 @@ package org.ciroque.ccr.logging
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.slf4j.{Marker, Logger}
+import org.slf4j.{Logger, Marker}
 
 class CachingLogger extends Logger {
 

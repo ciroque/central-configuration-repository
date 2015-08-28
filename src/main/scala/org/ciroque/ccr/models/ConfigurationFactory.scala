@@ -2,9 +2,9 @@ package org.ciroque.ccr.models
 
 import java.util.UUID
 
+import org.ciroque.ccr.core.CommonJsonFormatters._
 import org.joda.time.DateTime
 import spray.json._
-import org.ciroque.ccr.core.CommonJsonFormatters._
 
 object ConfigurationFactory extends DefaultJsonProtocol {
 

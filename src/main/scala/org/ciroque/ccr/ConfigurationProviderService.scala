@@ -6,6 +6,7 @@ import akka.util.Timeout
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
+import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
 import org.ciroque.ccr.responses._
@@ -19,7 +20,6 @@ import spray.httpx.SprayJsonSupport.sprayJsonMarshaller
 import spray.json._
 import spray.routing
 import spray.routing.{HttpService, RequestContext}
-import logging.ImplicitLogging._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -177,11 +177,11 @@ trait ConfigurationProviderService
   }
 
   private def withImplicitLoggingAndStats[T](
-    name: String,
-    environment: String,
-    application: String,
-    scope: String,
-    setting: String)(fx: => T) = {
+                                              name: String,
+                                              environment: String,
+                                              application: String,
+                                              scope: String,
+                                              setting: String)(fx: => T) = {
 
     accessStatsClient.recordQuery(environment, application, scope, setting)
     val values = Map("environment" -> environment, "application" -> application, "scope" -> scope, "setting" -> setting)

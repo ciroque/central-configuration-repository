@@ -5,8 +5,8 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import org.ciroque.ccr.datastores.InMemorySettingsDataStore
+import org.ciroque.ccr.stats.RedisAccessStatsClient
 import spray.can.Http
-import stats.RedisAccessStatsClient
 
 import scala.concurrent.duration._
 

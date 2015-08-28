@@ -31,9 +31,9 @@ class ConfigurationProviderServiceTests
 
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
   override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
-  override def actorRefFactory: ActorRefFactory = system
-
   override implicit val logger = new CachingLogger()
+
+  override def actorRefFactory: ActorRefFactory = system
 
   val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
 
@@ -250,6 +250,7 @@ class ConfigurationProviderServiceTests
           Get(settingUri) ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
+            import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
             val responseBody = responseAs[HyperMediaMessageResponse]
             responseBody.message should include(notFoundMessage)
             responseBody.message should include(environment)

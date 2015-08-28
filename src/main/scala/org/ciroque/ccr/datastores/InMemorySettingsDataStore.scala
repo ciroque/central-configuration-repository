@@ -37,9 +37,9 @@ class InMemorySettingsDataStore extends SettingsDataStore {
     val configs = applyFilter(
       conf =>
         (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
-        && conf.key.application == application
-        && conf.key.scope == scope
-        && conf.key.setting == setting
+          && conf.key.application == application
+          && conf.key.scope == scope
+          && conf.key.setting == setting
     )
 
     def findActives = configs.filter(_.isActive)

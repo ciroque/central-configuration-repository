@@ -1,13 +1,13 @@
 package org.ciroque.ccr.datastores
 
-import org.ciroque.ccr.datastores.DataStoreResults.{NotFound, Found}
+import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.Span
-import org.scalatest.{BeforeAndAfterAll, Matchers, FunSpec}
+import org.scalatest.{BeforeAndAfterAll, FunSpec, Matchers}
 
 abstract class SettingsDataStoreTests
   extends FunSpec
@@ -33,7 +33,7 @@ abstract class SettingsDataStoreTests
     testApplication,
     testScope,
     testSetting,
-      testValue,
+    testValue,
     testEffectiveAt,
     testExpiresAt,
     ttl
@@ -43,7 +43,7 @@ abstract class SettingsDataStoreTests
   val defaultLogRotationConfig: Configuration = ConfigurationFactory("default", "app4", "logging", "logrotation", "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
 
   override def beforeAll(): Unit = {
-//    super.beforeAll()
+    //    super.beforeAll()
 
     settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "loglevel", "DEBUG", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
     settingsDataStore.upsertConfiguration(ConfigurationFactory("dev", "app", "scope", "logfilename", "output.log", DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))

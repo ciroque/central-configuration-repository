@@ -1,9 +1,9 @@
 package org.ciroque.ccr
 
 import com.redis.RedisClient
+import org.ciroque.ccr.stats.RedisAccessStatsClient
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, FunSpec, Matchers}
-import stats.RedisAccessStatsClient
 
 class AccessStatsClientTests
   extends FunSpec

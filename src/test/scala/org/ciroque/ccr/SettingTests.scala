@@ -2,10 +2,10 @@ package org.ciroque.ccr
 
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.{Matchers, FunSpec}
+import org.scalatest.{FunSpec, Matchers}
 import spray.json.{JsNumber, JsString, JsValue}
 
-  class SettingTests extends FunSpec with Matchers {
+class SettingTests extends FunSpec with Matchers {
 
   describe("Setting ") {
 
@@ -14,13 +14,13 @@ import spray.json.{JsNumber, JsString, JsValue}
 
     it("should be constructable via a flattened parameter factory") {
       val setting = ConfigurationFactory("env", "app", "scope", "setting", "1000000", effectiveAt, expiresAt, 5000)
-      setting.key.environment should equal( "env")
-      setting.key.application should equal( "app")
-      setting.key.scope should equal( "scope")
-      setting.key.setting should equal( "setting")
-      setting.value should equal( "1000000")
-      setting.temporality.effectiveAt should equal( effectiveAt)
-      setting.temporality.expiresAt should equal( expiresAt)
+      setting.key.environment should equal("env")
+      setting.key.application should equal("app")
+      setting.key.scope should equal("scope")
+      setting.key.setting should equal("setting")
+      setting.value should equal("1000000")
+      setting.temporality.effectiveAt should equal(effectiveAt)
+      setting.temporality.expiresAt should equal(expiresAt)
     }
 
     it("should be renderable to JSON") {

@@ -3,17 +3,18 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.datastores.{SettingsDataStore, DataStoreResults}
-import DataStoreResults._
 import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.datastores.DataStoreResults._
+import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.ciroque.ccr.responses.ConfigurationResponse
 import spray.http.MediaTypes._
-import spray.http.{StatusCode, HttpResponse, HttpEntity, StatusCodes}
-import spray.routing.HttpService
-import scala.concurrent.ExecutionContext.Implicits.global
+import spray.http.{HttpEntity, HttpResponse, StatusCode, StatusCodes}
 import spray.json._
+import spray.routing.HttpService
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait ConfigurationManagementService
   extends HttpService {
