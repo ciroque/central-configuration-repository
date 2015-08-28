@@ -73,6 +73,7 @@ class ConfigurationProviderServiceTests
         Get(path) ~> routes ~> check {
           status should equal(Commons.teaPotStatusCode)
           assertCorsHeaders(headers)
+          import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
           val hyperMediaResponse = responseAs[HyperMediaMessageResponse]
           hyperMediaResponse.message should include("Please review the documentation")
           hyperMediaResponse._links.size should equal(1)
