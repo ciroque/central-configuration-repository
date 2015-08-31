@@ -29,7 +29,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit va
   }
 
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveScopes") {
+    withImplicitLogging("MongoSettingsDataStore.retrieveScopes") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)
@@ -44,7 +44,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit va
   }
 
   override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveSettings") {
+    withImplicitLogging("MongoSettingsDataStore.retrieveSettings") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)
@@ -65,7 +65,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit va
   }
 
   override def retrieveApplications(environment: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveApplications") {
+    withImplicitLogging("MongoSettingsDataStore.retrieveApplications") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.environmentKey, environment)
 
@@ -80,7 +80,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit va
   }
 
   override def retrieveEnvironments(): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveEnvironments") {
+    withImplicitLogging("MongoSettingsDataStore.retrieveEnvironments") {
       executeInCollection { collection =>
         val results = collection.distinct("key.environment")
         val environments = results.map(result => result.asInstanceOf[String]).sortBy(environment => environment)
@@ -91,7 +91,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit va
   }
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveConfiguration") {
+    withImplicitLogging("MongoSettingsDataStore.retrieveConfiguration") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)

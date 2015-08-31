@@ -22,20 +22,20 @@ class InMemorySettingsDataStore(implicit override val logger: Logger) extends Se
   }
 
   override def retrieveEnvironments(): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveEnvironments") {
+    withImplicitLogging("InMemorySettingsDataStore.retrieveEnvironments") {
       Future.successful(composeInterstitialResultOptionFor(allEnvironments(), () => ""))
     }
   }
 
   override def retrieveApplications(environment: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveApplications") {
+    withImplicitLogging("InMemorySettingsDataStore.retrieveApplications") {
       recordValue(Commons.KeyStrings.environmentKey, environment)
       Future.successful(composeInterstitialResultOptionFor(applicationsIn(environment), () => s"environment '$environment' was not found"))
     }
   }
 
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveScopes") {
+    withImplicitLogging("InMemorySettingsDataStore.retrieveScopes") {
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)
       Future.successful(composeInterstitialResultOptionFor(scopesIn(environment, application), () => s"environment '$environment' / application '$application' combination was not found"))
@@ -43,7 +43,7 @@ class InMemorySettingsDataStore(implicit override val logger: Logger) extends Se
   }
 
   override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveSettings") {
+    withImplicitLogging("InMemorySettingsDataStore.retrieveSettings") {
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)
       recordValue(Commons.KeyStrings.scopeKey, scope)
@@ -52,7 +52,7 @@ class InMemorySettingsDataStore(implicit override val logger: Logger) extends Se
   }
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
-    withImplicitLogging("retrieveConfiguration") {
+    withImplicitLogging("InMemorySettingsDataStore.retrieveConfiguration") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.environmentKey, environment)
       recordValue(Commons.KeyStrings.applicationKey, application)
