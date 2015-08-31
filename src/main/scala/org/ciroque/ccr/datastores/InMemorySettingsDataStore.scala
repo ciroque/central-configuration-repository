@@ -3,56 +3,81 @@ package org.ciroque.ccr.datastores
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.ciroque.ccr.logging.ImplicitLogging._
+import org.slf4j.Logger
 
 import scala.concurrent.Future
+import org.ciroque.ccr.core.Commons
 
-class InMemorySettingsDataStore extends SettingsDataStore {
+class InMemorySettingsDataStore(implicit override val logger: Logger) extends SettingsDataStore {
 
   private var configurations = List[Configuration]()
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
-    configurations = configurations :+ configuration
-    Future.successful(DataStoreResults.Added(configuration))
+    withImplicitLogging("InMemorySettingsDataStore::upsertConfiguration") {
+      recordValue("added-configuration", configuration.toJson.toString())
+      configurations = configurations :+ configuration
+      Future.successful(DataStoreResults.Added(configuration))
+    }
   }
 
   override def retrieveEnvironments(): Future[DataStoreResult] = {
-    Future.successful(
-      composeInterstitialResultOptionFor(allEnvironments(), () => "")
-    )
+    withImplicitLogging("retrieveEnvironments") {
+      Future.successful(composeInterstitialResultOptionFor(allEnvironments(), () => ""))
+    }
   }
 
   override def retrieveApplications(environment: String): Future[DataStoreResult] = {
-    Future.successful(composeInterstitialResultOptionFor(applicationsIn(environment), () => s"environment '$environment' was not found"))
+    withImplicitLogging("retrieveApplications") {
+      recordValue(Commons.KeyStrings.environmentKey, environment)
+      Future.successful(composeInterstitialResultOptionFor(applicationsIn(environment), () => s"environment '$environment' was not found"))
+    }
   }
 
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
-    Future.successful(composeInterstitialResultOptionFor(scopesIn(environment, application), () => s"environment '$environment' / application '$application' combination was not found"))
+    withImplicitLogging("retrieveScopes") {
+      recordValue(Commons.KeyStrings.environmentKey, environment)
+      recordValue(Commons.KeyStrings.applicationKey, application)
+      Future.successful(composeInterstitialResultOptionFor(scopesIn(environment, application), () => s"environment '$environment' / application '$application' combination was not found"))
+    }
   }
 
   override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
-    Future.successful(composeInterstitialResultOptionFor(settingsIn(environment, application, scope), () => s"environment '$environment' / application '$application' / scope '$scope' combination was not found"))
+    withImplicitLogging("retrieveSettings") {
+      recordValue(Commons.KeyStrings.environmentKey, environment)
+      recordValue(Commons.KeyStrings.applicationKey, application)
+      recordValue(Commons.KeyStrings.scopeKey, scope)
+      Future.successful(composeInterstitialResultOptionFor(settingsIn(environment, application, scope), () => s"environment '$environment' / application '$application' / scope '$scope' combination was not found"))
+    }
   }
 
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
-    val configs = applyFilter(
-      conf =>
-        (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
-          && conf.key.application == application
-          && conf.key.scope == scope
-          && conf.key.setting == setting
-    )
+    withImplicitLogging("retrieveConfiguration") {
+      import org.ciroque.ccr.core.Commons
+      recordValue(Commons.KeyStrings.environmentKey, environment)
+      recordValue(Commons.KeyStrings.applicationKey, application)
+      recordValue(Commons.KeyStrings.scopeKey, scope)
+      recordValue(Commons.KeyStrings.settingKey, setting)
+      val configs = applyFilter(
+        conf =>
+          (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
+            && conf.key.application == application
+            && conf.key.scope == scope
+            && conf.key.setting == setting
+      )
 
-    def findActives = configs.filter(_.isActive)
+      def findActives = configs.filter(_.isActive)
 
-    val result = configs match {
-      case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
-      case _ => findActives match {
-        case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
-        case found: Seq[Configuration] => Found(found)
+      val result = configs match {
+        case Nil => NotFound(s"${Commons.KeyStrings.environmentKey} '$environment' / ${Commons.KeyStrings.applicationKey} '$application' / ${Commons.KeyStrings.scopeKey} '$scope' / ${Commons.KeyStrings.settingKey} '$setting' combination was not found")
+        case _ => findActives match {
+          case Nil => NotFound(s"${Commons.KeyStrings.environmentKey} '$environment' / ${Commons.KeyStrings.applicationKey} '$application' / ${Commons.KeyStrings.scopeKey} '$scope' / ${Commons.KeyStrings.settingKey} '$setting' found no active configuration")
+          case found: Seq[Configuration] => Found(found)
+        }
       }
-    }
 
-    Future.successful(result)
+      Future.successful(result)
+    }
   }
 
   private def allEnvironments() = {

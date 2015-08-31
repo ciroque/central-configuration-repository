@@ -7,9 +7,12 @@ class MongoSettingsDataStoreTests
   extends SettingsDataStoreTests
   with BeforeAndAfterAll {
 
-  val settings: DataStoreProperties = new DataStoreProperties("localhost", 27017, "test-ccr", "configurations", "", "")
+  import org.ciroque.ccr.logging.CachingLogger
 
-  override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)
+  val settings: DataStoreProperties = new DataStoreProperties("localhost", 27017, "test-ccr", "configurations", "", "")
+  override implicit val logger = new CachingLogger()
+
+  override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)(logger)
 
   override def afterAll() = {
     super.afterAll()

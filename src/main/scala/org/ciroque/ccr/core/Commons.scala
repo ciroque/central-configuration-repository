@@ -8,6 +8,23 @@ import spray.json._
 object Commons {
   val rootPath = "ccr"
 
+  object KeyStrings {
+    val idKey = "_id"
+    val environmentKey = "environment"
+    val applicationKey = "application"
+    val scopeKey = "scope"
+    val settingKey = "setting"
+    val effectiveAtKey = "effectiveAt"
+    val expiresAtKey = "expiresAt"
+    val ttlKey = "ttl"
+    val temporalityKey = "temporality"
+    val temporalizationKey = "temporalization"
+    val keyKey = "key"
+    val valueKey = "value"
+  }
+
+
+
   val settingsSegment = "settings"
   val managementSegment = "schedule"
 

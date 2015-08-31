@@ -15,7 +15,7 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
 
         ()
 
-        addValue("Value1", "TheValueOfOne")
+        recordValue("Value1", "TheValueOfOne")
       }
 
       mockLogger.getEvents.size shouldBe 1

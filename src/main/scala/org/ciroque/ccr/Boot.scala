@@ -11,11 +11,17 @@ import spray.can.Http
 import scala.concurrent.duration._
 
 object Boot extends App {
-  implicit val system = ActorSystem("central-configuration-repository-system")
+
+  import org.slf4j.{LoggerFactory, Logger}
+
+  private val actorSystemName: String = "central-configuration-repository-system"
+  implicit val system = ActorSystem(actorSystemName)
   implicit val timeout = Timeout(5.seconds)
 
+  private val logger: Logger = LoggerFactory.getLogger(actorSystemName)
+
   // TODO: Use a factory and configuration to new these up.
-  private val dataStore = new InMemorySettingsDataStore()
+  private val dataStore = new InMemorySettingsDataStore()(logger)
   private val accessStatsClient = new RedisAccessStatsClient()
 
   val service = system.actorOf(
