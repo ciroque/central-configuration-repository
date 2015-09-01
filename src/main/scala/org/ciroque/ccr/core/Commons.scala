@@ -8,7 +8,7 @@ import spray.json._
 object Commons {
   val rootPath = "ccr"
 
-  val settingsSegment = "settings"
+  val settingsSegment = "setting"
   val managementSegment = "schedule"
 
   val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
