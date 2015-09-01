@@ -3,7 +3,7 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.core.{CcrService, Commons}
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
 import org.ciroque.ccr.logging.ImplicitLogging._
@@ -26,12 +26,15 @@ import scala.concurrent.Future
 
 trait ConfigurationProviderService
   extends HttpService
+  with CcrService
   with CcrTypes {
 
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
   implicit val accessStatsClient: AccessStatsClient
   implicit val logger: Logger
+
+  override def getVersion = new SemanticVersion(1,0,0)
 
   def defaultRoute = pathEndOrSingleSlash {
     get {
@@ -142,7 +145,7 @@ trait ConfigurationProviderService
                                foundFactory: List[T] => (JsValue, StatusCode),
                                notFoundFactory: (String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
                                failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory,
-                               generateHeader: (List[T]) => List[HttpHeaders.RawHeader] = (items: List[T]) => Commons.corsHeaders) = {
+                               generateHeaders: (List[T]) => List[HttpHeaders.RawHeader] = (items: List[T]) => Commons.corsHeaders) = {
 
     for {
       entities <- eventualDataStoreResult
@@ -156,7 +159,7 @@ trait ConfigurationProviderService
       context.complete(HttpResponse(
         statusCode,
         HttpEntity(`application/json`, jsonResult.toString()),
-        generateHeader(listOfEntities)))
+        generateHeaders(listOfEntities)))
     }
   }
 
