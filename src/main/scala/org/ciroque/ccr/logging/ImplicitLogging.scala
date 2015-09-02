@@ -25,7 +25,7 @@ object ImplicitLogging {
     }
   }
 
-  def addValue(name: String, value: String) = {
+  def recordValue(name: String, value: String) = {
     getCurrentImplicitLogger.addValue(name, value)
   }
 

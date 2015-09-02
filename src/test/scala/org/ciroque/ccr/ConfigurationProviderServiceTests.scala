@@ -43,15 +43,9 @@ class ConfigurationProviderServiceTests
     logger.reset()
   }
 
-  private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
-    logger.getEvents.size shouldBe 1
-    val logEvent = logger.getEvents.head
-    (name +: shouldInclude).foreach(expected => logEvent should include(expected))
-  }
-
   describe("ConfigurationProviderService") {
     val environment = "global"
-    val application = "application"
+    val application = Commons.KeyStrings.applicationKey
     val scope = "logging"
     val setting = "log-level"
 
@@ -124,7 +118,7 @@ class ConfigurationProviderServiceTests
           Get(s"$settingsPath/$environment") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
-            responseAs[String] should include("environment")
+            responseAs[String] should include(Commons.KeyStrings.environmentKey)
             responseAs[String] should include(environment)
           }
         }
@@ -303,6 +297,12 @@ class ConfigurationProviderServiceTests
     headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
     headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT"))
     headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
+  }
+
+  private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
+    logger.getEvents.size shouldBe count
+    val logEvent = logger.getEvents.head
+    (name +: shouldInclude).foreach(expected => logEvent should include(expected))
   }
 
   private def futureSuccessfulDataStoreResult[T](items: List[T]) = {

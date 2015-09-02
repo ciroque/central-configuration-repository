@@ -187,10 +187,10 @@ trait ConfigurationProviderService
                                               setting: String)(fx: => T) = {
 
     accessStatsClient.recordQuery(environment, application, scope, setting)
-    val values = Map("environment" -> environment, "application" -> application, "scope" -> scope, "setting" -> setting)
+    val values = Map(Commons.KeyStrings.environmentKey -> environment, Commons.KeyStrings.applicationKey -> application, Commons.KeyStrings.scopeKey -> scope, Commons.KeyStrings.settingKey -> setting)
 
     withImplicitLogging(name) {
-      values.filter(thing => thing._2 != "").map(thing => addValue(thing._1, thing._2))
+      values.filter(thing => thing._2 != "").map(thing => recordValue(thing._1, thing._2))
       fx
     }
   }

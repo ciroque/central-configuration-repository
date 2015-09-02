@@ -8,7 +8,25 @@ import spray.json._
 object Commons {
   val rootPath = "ccr"
 
-  val settingsSegment = "setting"
+  object KeyStrings {
+    val idKey = "_id"
+    val environmentKey = "environment"
+    val applicationKey = "application"
+    val scopeKey = "scope"
+    val settingKey = "setting"
+    val effectiveAtKey = "effectiveAt"
+    val expiresAtKey = "expiresAt"
+    val ttlKey = "ttl"
+    val temporalityKey = "temporality"
+    val temporalizationKey = "temporalization"
+    val keyKey = "key"
+    val valueKey = "value"
+  }
+
+
+
+  val settingsSegment = "settings"
+  val settingSegment = "setting"
   val managementSegment = "schedule"
 
   val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")

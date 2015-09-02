@@ -1,5 +1,10 @@
 package org.ciroque.ccr.datastores
 
 class InMemorySettingsDataStoreTests extends SettingsDataStoreTests {
-  implicit val settingsDataStore = new InMemorySettingsDataStore()
+  import org.ciroque.ccr.logging.CachingLogger
+  import org.slf4j.Logger
+
+  override implicit val logger: Logger = new CachingLogger()
+
+  implicit val settingsDataStore = new InMemorySettingsDataStore()(logger)
 }
