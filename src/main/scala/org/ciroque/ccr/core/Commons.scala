@@ -9,6 +9,7 @@ object Commons {
   val rootPath = "ccr"
 
   object KeyStrings {
+    val actorSystemName = "central-configuration-repository-system"
     val idKey = "_id"
     val environmentKey = "environment"
     val applicationKey = "application"
@@ -22,8 +23,6 @@ object Commons {
     val keyKey = "key"
     val valueKey = "value"
   }
-
-
 
   val settingsSegment = "settings"
   val settingSegment = "setting"

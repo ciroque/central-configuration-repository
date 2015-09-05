@@ -6,7 +6,7 @@ import org.slf4j.Logger
 
 import scala.concurrent.Future
 
-abstract class SettingsDataStore(implicit val logger: Logger) extends CcrTypes {
+abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
 
   def upsertConfiguration(configuration: Configuration): Future[DataStoreResult]
 

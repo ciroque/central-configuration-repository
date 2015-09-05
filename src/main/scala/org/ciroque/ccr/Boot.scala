@@ -4,6 +4,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.InMemorySettingsDataStore
 import org.ciroque.ccr.stats.RedisAccessStatsClient
 import spray.can.Http
@@ -12,13 +13,12 @@ import scala.concurrent.duration._
 
 object Boot extends App {
 
-  import org.slf4j.{LoggerFactory, Logger}
+  import org.slf4j.{Logger, LoggerFactory}
 
-  private val actorSystemName: String = "central-configuration-repository-system"
-  implicit val system = ActorSystem(actorSystemName)
+  implicit val system = ActorSystem(Commons.KeyStrings.actorSystemName)
   implicit val timeout = Timeout(5.seconds)
 
-  private val logger: Logger = LoggerFactory.getLogger(actorSystemName)
+  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
 
   // TODO: Use a factory and configuration to new these up.
   private val dataStore = new InMemorySettingsDataStore()(logger)

@@ -9,7 +9,7 @@ import org.slf4j.Logger
 import scala.concurrent.Future
 import org.ciroque.ccr.core.Commons
 
-class InMemorySettingsDataStore(implicit override val logger: Logger) extends SettingsDataStore {
+class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDataStore {
 
   private var configurations = List[Configuration]()
 

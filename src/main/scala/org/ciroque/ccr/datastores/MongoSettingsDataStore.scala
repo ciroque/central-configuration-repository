@@ -15,7 +15,7 @@ import org.slf4j.Logger
 
 import scala.concurrent.Future
 
-class MongoSettingsDataStore(settings: DataStoreProperties)(override implicit val logger: Logger) extends SettingsDataStore {
+class MongoSettingsDataStore(settings: DataStoreProperties)(implicit val logger: Logger) extends SettingsDataStore {
   val client = MongoClient(settings.hostname, settings.port)
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
