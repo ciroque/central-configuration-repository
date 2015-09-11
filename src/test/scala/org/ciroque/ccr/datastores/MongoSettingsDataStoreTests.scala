@@ -16,6 +16,6 @@ class MongoSettingsDataStoreTests
 
   override def afterAll() = {
     super.afterAll()
-    MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog).drop()
+    MongoClient(settings.hostname, settings.port)(settings.database)(settings.catalog).drop()
   }
 }

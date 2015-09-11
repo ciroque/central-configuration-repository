@@ -116,7 +116,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(implicit val logger:
   private def executeInCollection(fx: (MongoCollection) => DataStoreResult): Future[DataStoreResult] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val collection = MongoClient(settings.hostname, settings.port)(settings.databaseName)(settings.catalog)
+    val collection = MongoClient(settings.hostname, settings.port)(settings.database)(settings.catalog)
 
     Future(fx(collection)).recoverWith {
       case ex => Future.successful(DataStoreResults.Failure("FAILED", ex))
