@@ -9,7 +9,7 @@ class MongoSettingsDataStoreTests
 
   import org.ciroque.ccr.logging.CachingLogger
 
-  val settings: DataStoreProperties = new DataStoreProperties("localhost", Some(25026), "test-ccr", "configurations", "", "")
+  val settings: DataStoreProperties = new DataStoreProperties("localhost", None, "test-ccr", "configurations", "", "")
   override implicit val logger = new CachingLogger()
 
   override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)(logger)
