@@ -4,8 +4,8 @@ import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.InMemorySettingsDataStore
 import org.ciroque.ccr.stats.RedisAccessStatsClient
 import spray.can.Http
 
@@ -21,7 +21,9 @@ object Boot extends App {
   private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
 
   // TODO: Use a factory and configuration to new these up.
-  private val dataStore = new InMemorySettingsDataStore()(logger)
+  val config = ConfigFactory.load("application.conf")
+  private val dataStore = EngineFactory.buildStorageInstance(config)
+
   private val accessStatsClient = new RedisAccessStatsClient()
 
   val service = system.actorOf(

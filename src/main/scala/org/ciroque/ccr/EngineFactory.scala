@@ -6,16 +6,16 @@ import org.ciroque.ccr.datastores.{DataStoreProperties, MongoSettingsDataStore, 
 import org.slf4j.LoggerFactory
 
 object EngineFactory {
-
-  val expectedDataStorageClassPath = "datastore.class"
-  val expectedDataStorageParamsPath = "datastore.params"
+  val enginePathPrefix = "ccr.engines"
+  val dataStorageClassPath = enginePathPrefix + ".datastore.class"
+  val dataStorageParamsPath = enginePathPrefix + ".datastore.params"
 
   def buildStorageInstance(dataStoreConfig: Config): SettingsDataStore = {
     val logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
 
     val clazz = {
-      dataStoreConfig.hasPath(expectedDataStorageClassPath) match {
-        case true => Some(dataStoreConfig.getString(expectedDataStorageClassPath))
+      dataStoreConfig.hasPath(dataStorageClassPath) match {
+        case true => Some(dataStoreConfig.getString(dataStorageClassPath))
         case false => None
       }
     }
@@ -23,7 +23,7 @@ object EngineFactory {
     clazz match {
       case None | Some("InMemoryDataStore") => new InMemorySettingsDataStore()(logger)
       case Some("MongoSettingsDataStore") =>
-        val properties = DataStoreProperties.fromConfig(dataStoreConfig.getConfig(expectedDataStorageParamsPath))
+        val properties = DataStoreProperties.fromConfig(dataStoreConfig.getConfig(dataStorageParamsPath))
         new MongoSettingsDataStore(properties)(logger)
       case _ => throw new Exception(s"Unknown SettingsDataStore class:  $clazz")
     }
