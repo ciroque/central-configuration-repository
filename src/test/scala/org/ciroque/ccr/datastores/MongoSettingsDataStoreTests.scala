@@ -9,13 +9,13 @@ class MongoSettingsDataStoreTests
 
   import org.ciroque.ccr.logging.CachingLogger
 
-  val settings: DataStoreProperties = new DataStoreProperties("localhost", 27017, "test-ccr", "configurations", "", "")
+  val settings: DataStoreProperties = new DataStoreProperties("localhost", Some(25026), "test-ccr", "configurations", "", "")
   override implicit val logger = new CachingLogger()
 
   override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)(logger)
 
   override def afterAll() = {
     super.afterAll()
-    MongoClient(settings.hostname, settings.port)(settings.database)(settings.catalog).drop()
+    MongoClient(settings.hostname, settings.port.getOrElse(25026))(settings.database)(settings.catalog).drop()
   }
 }

@@ -16,7 +16,9 @@ import org.slf4j.Logger
 import scala.concurrent.Future
 
 class MongoSettingsDataStore(settings: DataStoreProperties)(implicit val logger: Logger) extends SettingsDataStore {
-  val client = MongoClient(settings.hostname, settings.port)
+  val defaultPort = 25026
+
+  val client = MongoClient(settings.hostname, settings.port.getOrElse(defaultPort))
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
     withImplicitLogging("MongoSettingsDataStore::upsertConfiguration") {
@@ -116,7 +118,7 @@ class MongoSettingsDataStore(settings: DataStoreProperties)(implicit val logger:
   private def executeInCollection(fx: (MongoCollection) => DataStoreResult): Future[DataStoreResult] = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val collection = MongoClient(settings.hostname, settings.port)(settings.database)(settings.catalog)
+    val collection = client(settings.database)(settings.catalog)
 
     Future(fx(collection)).recoverWith {
       case ex => Future.successful(DataStoreResults.Failure("FAILED", ex))

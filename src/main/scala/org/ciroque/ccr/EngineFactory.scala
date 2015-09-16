@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 object EngineFactory {
 
   val expectedDataStorageClassPath = "datastore.class"
+  val expectedDataStorageParamsPath = "datastore.params"
 
   def buildStorageInstance(dataStoreConfig: Config): SettingsDataStore = {
     val logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
@@ -21,10 +22,9 @@ object EngineFactory {
 
     clazz match {
       case None | Some("InMemoryDataStore") => new InMemorySettingsDataStore()(logger)
-      case Some("MongoSettingsDataStore") => {
-        val properties = DataStoreProperties.fromConfig(dataStoreConfig.getConfig("datastore.params"))
+      case Some("MongoSettingsDataStore") =>
+        val properties = DataStoreProperties.fromConfig(dataStoreConfig.getConfig(expectedDataStorageParamsPath))
         new MongoSettingsDataStore(properties)(logger)
-      }
       case _ => throw new Exception(s"Unknown SettingsDataStore class:  $clazz")
     }
   }

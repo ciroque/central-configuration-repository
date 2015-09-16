@@ -29,12 +29,9 @@ class EngineFactoryTests extends FunSpec with Matchers {
       it("should create a MongoSettingsDataStore configured correctly with a valid configuration") {
         val cfg = ConfigFactory.load("MongoSettingsDataStore-valid.conf")
         val dataStoreConfig = cfg.getConfig("ccr.engines")
-
         val dataStore = EngineFactory.buildStorageInstance(dataStoreConfig)
-
         dataStore shouldBe a[MongoSettingsDataStore]
       }
     }
   }
-
 }
