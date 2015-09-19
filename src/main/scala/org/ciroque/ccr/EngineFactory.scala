@@ -23,7 +23,7 @@ object EngineFactory {
     clazz match {
       case None | Some("InMemoryDataStore") => new InMemorySettingsDataStore()(logger)
       case Some("MongoSettingsDataStore") =>
-        val properties = DataStoreProperties.fromConfig(dataStoreConfig.getConfig(dataStorageParamsPath))
+        val properties = DataStoreProperties.fromConfig(dataStoreConfig)
         new MongoSettingsDataStore(properties)(logger)
       case _ => throw new Exception(s"Unknown SettingsDataStore class:  $clazz")
     }

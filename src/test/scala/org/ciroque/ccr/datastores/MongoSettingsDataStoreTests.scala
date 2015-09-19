@@ -16,6 +16,6 @@ class MongoSettingsDataStoreTests
 
   override def afterAll() = {
     super.afterAll()
-    MongoClient(settings.hostname, settings.port.getOrElse(25026))(settings.database)(settings.catalog).drop()
+    MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))(settings.database)(settings.catalog).drop()
   }
 }
