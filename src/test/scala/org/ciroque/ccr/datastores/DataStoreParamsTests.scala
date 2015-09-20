@@ -1,43 +1,41 @@
 package org.ciroque.ccr.datastores
 
-import com.typesafe.config.ConfigFactory
+import org.ciroque.ccr.core.ConfigFactory
 import org.scalatest.{FunSpec, Matchers}
 
 class DataStoreParamsTests
   extends FunSpec
   with Matchers {
 
-  describe("DataSettingsParams") {
+  describe("DataStoreParams") {
     val datastoreParamsPath: String = "ccr.engines.datastore.params"
 
     it("successfully parses a properly formatted config file") {
       val config = ConfigFactory.load("MongoSettingsDataStore-valid.conf")
-      val dsp = DataStoreParams.fromConfig(config)
 
-      dsp.hostname shouldEqual "localhost"
-      dsp.port shouldEqual Some(MongoSettingsDataStore.defaultPort)
-      dsp.catalog shouldEqual "settings"
-      dsp.database shouldEqual "ccr-testing"
+      config.clazz shouldEqual Some("MongoSettingsDataStore")
+      config.params.hostname shouldEqual "localhost"
+      config.params.port shouldEqual Some(MongoSettingsDataStore.defaultPort)
+      config.params.catalog shouldEqual "settings"
+      config.params.database shouldEqual "ccr-testing"
     }
 
     it("applies default hostname and database names when not present in configuration") {
       val config = ConfigFactory.load("SettingsDataStore-MissingHostnamePortAndDatabase.conf")
-      val dsp = DataStoreParams.fromConfig(config)
 
-      dsp.hostname shouldEqual "localhost"
-      dsp.port shouldEqual None
-      dsp.database shouldEqual "ccr"
-      dsp.catalog shouldEqual "settings"
+      config.params.hostname shouldEqual "localhost"
+      config.params.port shouldEqual None
+      config.params.database shouldEqual "ccr"
+      config.params.catalog shouldEqual "settings"
     }
 
     it("applies default values when the config is empty") {
       val config = ConfigFactory.load("NoDataStoreEntries.conf")
-      val dsp = DataStoreParams.fromConfig(config)
 
-      dsp.hostname shouldEqual "localhost"
-      dsp.port shouldEqual None
-      dsp.database shouldEqual "ccr"
-      dsp.catalog shouldEqual "settings"
+      config.params.hostname shouldEqual "localhost"
+      config.params.port shouldEqual None
+      config.params.database shouldEqual "ccr"
+      config.params.catalog shouldEqual "settings"
     }
   }
 }

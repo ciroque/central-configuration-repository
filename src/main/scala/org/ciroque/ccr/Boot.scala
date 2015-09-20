@@ -4,8 +4,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-import org.ciroque.ccr.core.Commons
+import org.ciroque.ccr.core.{Commons, ConfigFactory}
 import org.ciroque.ccr.stats.RedisAccessStatsClient
 import spray.can.Http
 
