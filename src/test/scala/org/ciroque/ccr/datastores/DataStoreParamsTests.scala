@@ -3,11 +3,11 @@ package org.ciroque.ccr.datastores
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSpec, Matchers}
 
-class DataStorePropertiesTests
+class DataStoreParamsTests
   extends FunSpec
   with Matchers {
 
-  describe("DataSettingsProperties") {
+  describe("DataSettingsParams") {
     val datastoreParamsPath: String = "ccr.engines.datastore.params"
 
     it("successfully parses a properly formatted config file") {
