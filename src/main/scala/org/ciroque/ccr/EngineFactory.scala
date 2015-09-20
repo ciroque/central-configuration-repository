@@ -2,7 +2,7 @@ package org.ciroque.ccr
 
 import com.typesafe.config.Config
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.{DataStoreProperties, MongoSettingsDataStore, InMemorySettingsDataStore, SettingsDataStore}
+import org.ciroque.ccr.datastores._
 import org.slf4j.LoggerFactory
 
 object EngineFactory {
@@ -23,7 +23,7 @@ object EngineFactory {
     clazz match {
       case None | Some("InMemoryDataStore") => new InMemorySettingsDataStore()(logger)
       case Some("MongoSettingsDataStore") =>
-        val properties = DataStoreProperties.fromConfig(dataStoreConfig)
+        val properties = DataStoreParams.fromConfig(dataStoreConfig)
         new MongoSettingsDataStore(properties)(logger)
       case _ => throw new Exception(s"Unknown SettingsDataStore class:  $clazz")
     }

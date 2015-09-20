@@ -19,7 +19,7 @@ object MongoSettingsDataStore {
   val defaultPort = 27017
 }
 
-class MongoSettingsDataStore(settings: DataStoreProperties)(implicit val logger: Logger) extends SettingsDataStore {
+class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Logger) extends SettingsDataStore {
   val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {

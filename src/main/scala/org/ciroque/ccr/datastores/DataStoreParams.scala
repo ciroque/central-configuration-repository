@@ -2,8 +2,8 @@ package org.ciroque.ccr.datastores
 
 import com.typesafe.config.{ConfigFactory, Config}
 
-object DataStoreProperties {
-  def fromConfig(config: Config): DataStoreProperties = {
+object DataStoreParams {
+  def fromConfig(config: Config): DataStoreParams = {
 
     val ccrKey = "ccr"
     val enginesKey = "engines"
@@ -57,7 +57,7 @@ object DataStoreProperties {
       else None
     }
 
-    DataStoreProperties(
+    DataStoreParams(
       realizedConfig.getString(hostnameKey),
       getValueOption(portKey),
       realizedConfig.getString(databaseKey),
@@ -68,7 +68,7 @@ object DataStoreProperties {
   }
 }
 
-case class DataStoreProperties(hostname: String,
+case class DataStoreParams(hostname: String,
                                port: Option[Int],
                                database: String,
                                catalog: String,

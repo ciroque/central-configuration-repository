@@ -12,7 +12,7 @@ class DataStorePropertiesTests
 
     it("successfully parses a properly formatted config file") {
       val config = ConfigFactory.load("MongoSettingsDataStore-valid.conf")
-      val dsp = DataStoreProperties.fromConfig(config)
+      val dsp = DataStoreParams.fromConfig(config)
 
       dsp.hostname shouldEqual "localhost"
       dsp.port shouldEqual Some(MongoSettingsDataStore.defaultPort)
@@ -22,7 +22,7 @@ class DataStorePropertiesTests
 
     it("applies default hostname and database names when not present in configuration") {
       val config = ConfigFactory.load("SettingsDataStore-MissingHostnamePortAndDatabase.conf")
-      val dsp = DataStoreProperties.fromConfig(config)
+      val dsp = DataStoreParams.fromConfig(config)
 
       dsp.hostname shouldEqual "localhost"
       dsp.port shouldEqual None
@@ -32,7 +32,7 @@ class DataStorePropertiesTests
 
     it("applies default values when the config is empty") {
       val config = ConfigFactory.load("NoDataStoreEntries.conf")
-      val dsp = DataStoreProperties.fromConfig(config)
+      val dsp = DataStoreParams.fromConfig(config)
 
       dsp.hostname shouldEqual "localhost"
       dsp.port shouldEqual None
