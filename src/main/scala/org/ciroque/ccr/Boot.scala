@@ -14,10 +14,10 @@ object Boot extends App {
 
   import org.slf4j.{Logger, LoggerFactory}
 
-  implicit val system = ActorSystem(Commons.KeyStrings.actorSystemName)
+  implicit val system = ActorSystem(Commons.KeyStrings.ActorSystemName)
   implicit val timeout = Timeout(5.seconds)
 
-  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
+  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
 
   // TODO: Use a factory and configuration to new these up.
   val config = ConfigFactory.load("application.conf")

@@ -23,7 +23,8 @@ libraryDependencies ++= {
     "org.specs2" %% "specs2-core" % "2.3.11" % "test",
     "org.easymock" % "easymock" % "3.2" % "test",
     "net.debasishg" %% "redisclient" % "3.0",
-    "ch.qos.logback" % "logback-classic" % "1.1.3" % "runtime"
+    "ch.qos.logback" % "logback-classic" % "1.1.3" % "runtime",
+    "com.gettyimages" %% "spray-swagger" % "0.5.1"
   )
 }
 

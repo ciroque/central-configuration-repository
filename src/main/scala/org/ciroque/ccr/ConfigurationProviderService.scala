@@ -3,6 +3,7 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
+import com.wordnik.swagger.annotations.{ApiImplicitParam, Api, ApiImplicitParams, ApiOperation}
 import org.ciroque.ccr.core.{CcrService, Commons}
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
@@ -24,6 +25,7 @@ import spray.routing.{HttpService, RequestContext}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+@Api(value = "/ccr", description = "Central Configuration Repository - Configuration Provider")
 trait ConfigurationProviderService
   extends HttpService
   with CcrService
@@ -34,14 +36,24 @@ trait ConfigurationProviderService
   implicit val accessStatsClient: AccessStatsClient
   implicit val logger: Logger
 
-  override def getVersion = new SemanticVersion(1,0,0)
+  override def getVersion = new SemanticVersion(1, 0, 0)
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.RootRoute,
+    notes = Commons.ApiDocumentationStrings.SeeDocumentation,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.RootRoute)
   def defaultRoute = pathEndOrSingleSlash {
     get {
       respondWithTeapot
     }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.AppRoute,
+    notes = Commons.ApiDocumentationStrings.SeeDocumentation,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.AppRoute)
   def appRoute = path(Commons.rootPath) {
     pathEndOrSingleSlash {
       get {
@@ -50,6 +62,11 @@ trait ConfigurationProviderService
     }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.EnvironmentsRoute,
+    notes = Commons.ApiDocumentationStrings.EnvironmentsNotes,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.EnvironmentsRoute)
   def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
     pathEndOrSingleSlash {
       get { ctx =>
@@ -64,6 +81,17 @@ trait ConfigurationProviderService
     }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.ApplicationsRoute,
+    notes = Commons.ApiDocumentationStrings.ApplicationsNotes,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.ApplicationsRoute)
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.EnvironmentKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType)))
   def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment) {
     environment =>
       pathEndOrSingleSlash {
@@ -80,6 +108,23 @@ trait ConfigurationProviderService
       }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.ScopesRoute,
+    notes = Commons.ApiDocumentationStrings.ScopesNotes,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.ScopesRoute)
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.ApplicationKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.StringDataType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.EnvironmentKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType)
+  ))
   def scopesRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
     (environment, application) =>
       pathEndOrSingleSlash {
@@ -95,6 +140,28 @@ trait ConfigurationProviderService
       }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.SettingsRoute,
+    notes = Commons.ApiDocumentationStrings.SettingsNotes,
+    httpMethod = Commons.ApiDocumentationStrings.SettingsNotes,
+    nickname = Commons.ApiDocumentationStrings.SettingsRoute)
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.EnvironmentKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.ApplicationKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.ScopeKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType)
+  ))
   def settingsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
       pathEndOrSingleSlash {
@@ -110,6 +177,33 @@ trait ConfigurationProviderService
       }
   }
 
+  @ApiOperation(
+    value = Commons.ApiDocumentationStrings.ConfigurationsRoute,
+    notes = Commons.ApiDocumentationStrings.ConfigurationsNotes,
+    httpMethod = Commons.ApiDocumentationStrings.GetMethod,
+    nickname = Commons.ApiDocumentationStrings.ConfigurationsRoute)
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.EnvironmentKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.ApplicationKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.ScopeKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType),
+    new ApiImplicitParam(
+      name = Commons.KeyStrings.SettingKey,
+      dataType = Commons.ApiDocumentationStrings.StringDataType,
+      required = true,
+      paramType = Commons.ApiDocumentationStrings.PathParamType)
+  ))
   def configurationRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) =>
       pathEndOrSingleSlash {
@@ -154,6 +248,7 @@ trait ConfigurationProviderService
         case Found(items: List[T]) => (foundFactory(items), items)
         case NotFound(message) => (notFoundFactory(message), List())
         case Failure(message, cause) => (failureFactory(message, cause), List())
+        case _ => ((s"No match for entities. ${entities.toString}", StatusCodes.InternalServerError), List())
       }
 
       context.complete(HttpResponse(
@@ -172,7 +267,7 @@ trait ConfigurationProviderService
         respondWithStatus(Commons.teaPotStatusCode) {
           complete {
             import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
-            HyperMediaMessageResponse("Please review the documentation to learn how to use this service.", Map("documentation" -> "/documentation"))
+            HyperMediaMessageResponse(Commons.ApiDocumentationStrings.SeeDocumentation, Map("documentation" -> "/documentation"))
           }
         }
       }
@@ -187,7 +282,7 @@ trait ConfigurationProviderService
                                               setting: String)(fx: => T) = {
 
     accessStatsClient.recordQuery(environment, application, scope, setting)
-    val values = Map(Commons.KeyStrings.environmentKey -> environment, Commons.KeyStrings.applicationKey -> application, Commons.KeyStrings.scopeKey -> scope, Commons.KeyStrings.settingKey -> setting)
+    val values = Map(Commons.KeyStrings.EnvironmentKey -> environment, Commons.KeyStrings.ApplicationKey -> application, Commons.KeyStrings.ScopeKey -> scope, Commons.KeyStrings.SettingKey -> setting)
 
     withImplicitLogging(name) {
       values.filter(thing => thing._2 != "").map(thing => recordValue(thing._1, thing._2))

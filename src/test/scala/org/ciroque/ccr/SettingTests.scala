@@ -41,33 +41,33 @@ class SettingTests extends FunSpec with Matchers {
       val json = configuration.toJson.asJsObject
 
       val fields = json.fields
-      fields.keys should contain(Commons.KeyStrings.keyKey)
-      fields.keys should contain(Commons.KeyStrings.valueKey)
-      fields.keys should contain(Commons.KeyStrings.temporalityKey)
+      fields.keys should contain(Commons.KeyStrings.KeyKey)
+      fields.keys should contain(Commons.KeyStrings.ValueKey)
+      fields.keys should contain(Commons.KeyStrings.TemporalityKey)
 
-      assertValue(fields, Commons.KeyStrings.valueKey, JsString(value))
+      assertValue(fields, Commons.KeyStrings.ValueKey, JsString(value))
 
       configuration._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
-      val keyFields = fields.get(Commons.KeyStrings.keyKey).get.asJsObject.fields
-      keyFields.keys should contain(Commons.KeyStrings.environmentKey)
-      keyFields.keys should contain(Commons.KeyStrings.applicationKey)
-      keyFields.keys should contain(Commons.KeyStrings.scopeKey)
-      keyFields.keys should contain(Commons.KeyStrings.settingKey)
+      val keyFields = fields.get(Commons.KeyStrings.KeyKey).get.asJsObject.fields
+      keyFields.keys should contain(Commons.KeyStrings.EnvironmentKey)
+      keyFields.keys should contain(Commons.KeyStrings.ApplicationKey)
+      keyFields.keys should contain(Commons.KeyStrings.ScopeKey)
+      keyFields.keys should contain(Commons.KeyStrings.SettingKey)
 
-      assertValue(keyFields, Commons.KeyStrings.environmentKey, JsString(env))
-      assertValue(keyFields, Commons.KeyStrings.applicationKey, JsString(app))
-      assertValue(keyFields, Commons.KeyStrings.scopeKey, JsString(scp))
-      assertValue(keyFields, Commons.KeyStrings.settingKey, JsString(set))
+      assertValue(keyFields, Commons.KeyStrings.EnvironmentKey, JsString(env))
+      assertValue(keyFields, Commons.KeyStrings.ApplicationKey, JsString(app))
+      assertValue(keyFields, Commons.KeyStrings.ScopeKey, JsString(scp))
+      assertValue(keyFields, Commons.KeyStrings.SettingKey, JsString(set))
 
-      val temporalityFields = fields.get(Commons.KeyStrings.temporalityKey).get.asJsObject.fields
-      temporalityFields.keys should contain(Commons.KeyStrings.effectiveAtKey)
-      temporalityFields.keys should contain(Commons.KeyStrings.expiresAtKey)
-      temporalityFields.keys should contain(Commons.KeyStrings.ttlKey)
+      val temporalityFields = fields.get(Commons.KeyStrings.TemporalityKey).get.asJsObject.fields
+      temporalityFields.keys should contain(Commons.KeyStrings.EffectiveAtKey)
+      temporalityFields.keys should contain(Commons.KeyStrings.ExpiresAtKey)
+      temporalityFields.keys should contain(Commons.KeyStrings.TtlKey)
 
-      assertValue(temporalityFields, Commons.KeyStrings.effectiveAtKey, JsString(effectiveAt.toString()))
-      assertValue(temporalityFields, Commons.KeyStrings.expiresAtKey, JsString(expiresAt.toString()))
-      assertValue(temporalityFields, Commons.KeyStrings.ttlKey, JsNumber(ttl))
+      assertValue(temporalityFields, Commons.KeyStrings.EffectiveAtKey, JsString(effectiveAt.toString()))
+      assertValue(temporalityFields, Commons.KeyStrings.ExpiresAtKey, JsString(expiresAt.toString()))
+      assertValue(temporalityFields, Commons.KeyStrings.TtlKey, JsNumber(ttl))
     }
   }
 }

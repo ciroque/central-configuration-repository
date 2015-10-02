@@ -45,7 +45,7 @@ class ConfigurationProviderServiceTests
 
   describe("ConfigurationProviderService") {
     val environment = "global"
-    val application = Commons.KeyStrings.applicationKey
+    val application = Commons.KeyStrings.ApplicationKey
     val scope = "logging"
     val setting = "log-level"
 
@@ -118,7 +118,7 @@ class ConfigurationProviderServiceTests
           Get(s"$settingsPath/$environment") ~> routes ~> check {
             status should equal(StatusCodes.NotFound)
             assertCorsHeaders(headers)
-            responseAs[String] should include(Commons.KeyStrings.environmentKey)
+            responseAs[String] should include(Commons.KeyStrings.EnvironmentKey)
             responseAs[String] should include(environment)
           }
         }

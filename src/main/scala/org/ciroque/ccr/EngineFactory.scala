@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 
 object EngineFactory {
   def buildStorageInstance(dataStoreConfig: DataStoreConfig): SettingsDataStore = {
-    val logger = LoggerFactory.getLogger(Commons.KeyStrings.actorSystemName)
+    val logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
 
     dataStoreConfig.clazz match {
       case None | Some("InMemoryDataStore") => new InMemorySettingsDataStore()(logger)
