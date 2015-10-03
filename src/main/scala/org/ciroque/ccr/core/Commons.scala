@@ -25,11 +25,18 @@ object Commons {
   }
 
   object ApiDocumentationStrings {
+    final val ApiDescription = "Centralized repository for application configuration settings."
+    final val ApiRoute = "/ccr"
+    final val ApiTitle = "Central Configuration Repository"
+    final val ApiLicense = ""
+    final val ApiLicenseUri = ""
     final val AppRoute = "App Route"
     final val ApplicationsNotes = "Retrieves the list of applications in the given environment."
     final val ApplicationsRoute = "Retrieve Applications"
     final val ConfigurationsNotes = "Retrieves the configuration for the given environment, application, scope, and setting."
+    final val ConfigurationProviderApiDescription = "Central Configuration Repository - Configuration Provider"
     final val ConfigurationsRoute = "Retrieve Configuration"
+    final val ApiContact = "Steve Wagner (scalawagz@outlook.com)"
     final val EnvironmentsNotes = "Retrieves the list of environments in the system."
     final val EnvironmentsRoute = "Retrieve Environments"
     final val GetMethod = "GET"
@@ -41,6 +48,7 @@ object Commons {
     final val ScopesNotes = "Retrieves the list of scopes for the given environment and application."
     final val ScopesRoute = "Retrieve Scopes"
     final val StringDataType = "String"
+    final val TermsOfServiceUri = ""
   }
 
 

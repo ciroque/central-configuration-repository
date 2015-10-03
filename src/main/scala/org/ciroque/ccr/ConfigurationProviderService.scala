@@ -25,7 +25,7 @@ import spray.routing.{HttpService, RequestContext}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-@Api(value = "/ccr", description = "Central Configuration Repository - Configuration Provider")
+@Api(value = Commons.ApiDocumentationStrings.ApiRoute, description = Commons.ApiDocumentationStrings.ConfigurationProviderApiDescription)
 trait ConfigurationProviderService
   extends HttpService
   with CcrService
@@ -274,8 +274,7 @@ trait ConfigurationProviderService
     }
   }
 
-  private def withImplicitLoggingAndStats[T](
-                                              name: String,
+  private def withImplicitLoggingAndStats[T](name: String,
                                               environment: String,
                                               application: String,
                                               scope: String,

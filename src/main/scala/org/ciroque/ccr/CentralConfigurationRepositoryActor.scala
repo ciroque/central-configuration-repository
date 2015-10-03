@@ -32,7 +32,13 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
   val swaggerService = new SwaggerHttpService {
     def actorRefFactory = context
     def apiTypes = Seq(typeOf[ConfigurationProviderService], typeOf[ConfigurationManagementService])
-    override def apiInfo = Some(new ApiInfo("Central Configuration Repository", "Centralized repository for application configuration settings.", "", "Steve Wagner (scalawagz@outlook.com)", "", ""))
+    override def apiInfo = Some(new ApiInfo(
+      Commons.ApiDocumentationStrings.ApiTitle,
+      Commons.ApiDocumentationStrings.ApiDescription,
+      Commons.ApiDocumentationStrings.TermsOfServiceUri,
+      Commons.ApiDocumentationStrings.ApiContact,
+      Commons.ApiDocumentationStrings.ApiLicense,
+      Commons.ApiDocumentationStrings.ApiLicenseUri))
     def apiVersion = "1.0"
     def baseUrl = s"/${Commons.rootPath}" //the url of your api, not swagger's json endpoint
   }
