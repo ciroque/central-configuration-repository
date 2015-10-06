@@ -157,7 +157,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     else if(input.indexOf("*") > -1)
       input.replace("*", ".*").r
     else
-      input.r
+      input
   }
 
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
