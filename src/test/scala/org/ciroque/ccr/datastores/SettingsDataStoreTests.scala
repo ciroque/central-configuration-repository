@@ -42,6 +42,11 @@ abstract class SettingsDataStoreTests
   val logRotationSetting: String = "logrotation"
   val logFilenameSetting: String = "logfilename"
 
+  val wildcardEnvironment: String = "environment:wildcard"
+  val wildcardApplication: String = "application:wildcard"
+  val wildcardScope: String = "scope:wildcard"
+  val wildcardSetting: String = "setting:wildcard"
+
   val nonExistentSegment: String = "non-existent"
 
   val testConfiguration = ConfigurationFactory(
@@ -56,7 +61,8 @@ abstract class SettingsDataStoreTests
   )
 
   val activeLogLevelConfiguration: Configuration = ConfigurationFactory(prodEnvironment, application3, loggingScope, logLevelSetting, "ALL", DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L)
-  val defaultLogRotationConfig: Configuration = ConfigurationFactory("default", "app4", loggingScope, logRotationSetting, "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
+  val defaultLogRotationConfiguration: Configuration = ConfigurationFactory("default", "app4", loggingScope, logRotationSetting, "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
+  val wildcardConfiguration: Configuration = ConfigurationFactory(wildcardEnvironment, wildcardApplication, wildcardScope, wildcardSetting, "WILDCARD", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 360000L)
 
   override def beforeEach(): Unit = {
     import org.ciroque.ccr.logging.CachingLogger
@@ -97,8 +103,10 @@ abstract class SettingsDataStoreTests
     settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logFilenameSetting, "output.log", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
     settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logRotationSetting, "24hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
 
-    settingsDataStore.upsertConfiguration(defaultLogRotationConfig)
+    settingsDataStore.upsertConfiguration(defaultLogRotationConfiguration)
     settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, "app4", loggingScope, logRotationSetting, "24hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+
+    settingsDataStore.upsertConfiguration(wildcardConfiguration)
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -157,17 +165,27 @@ abstract class SettingsDataStoreTests
     it("Returns a default, if present, when no active configuration is present") {
       whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application4, loggingScope, logRotationSetting), Timeout(Span.Max)) {
         result =>
-          result should be(DataStoreResults.Found(Seq(defaultLogRotationConfig)))
+          result should be(DataStoreResults.Found(Seq(defaultLogRotationConfiguration)))
       }
 
       assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application4, loggingScope, logRotationSetting)
+    }
+
+    it("returns a setting with leading wildcards in the environment, applications, scope, and settings segments") {
+      val leadingWildcardSearch = "*:wildcard"
+      whenReady(settingsDataStore.retrieveConfiguration(leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch), Timeout(Span.Max)) {
+        result =>
+          result should be(DataStoreResults.Found(Seq(wildcardConfiguration)))
+      }
+
+      assertLogEvents("retrieveConfiguration", 1, leadingWildcardSearch)
     }
   }
 
   describe("environments") {
     it("Returns the correct environments") {
       whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.Found(List[String]("default", devEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
+        result should be(DataStoreResults.Found(List[String]("default", devEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
       }
 
       assertLogEvents("retrieveEnvironments", 1)
@@ -190,6 +208,42 @@ abstract class SettingsDataStoreTests
 
       assertLogEvents("retrieveApplications", 1, nonExistentSegment)
     }
+
+    it("Handles wildcard searches for environments") {
+      val wildcardQuery = "environment:*"
+      whenReady(settingsDataStore.retrieveApplications(wildcardQuery), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardApplication)))
+      }
+
+      assertLogEvents("retrieveApplications", 1, wildcardQuery)
+    }
+
+    it("Handles regex wildcard searches for environments") {
+      val wildcardQuery = "environment:.*"
+      whenReady(settingsDataStore.retrieveApplications(wildcardQuery), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardApplication)))
+      }
+
+      assertLogEvents("retrieveApplications", 1, wildcardQuery)
+    }
+
+    it("Handles trailing wildcard searches for environments") {
+      val wildcardQuery = "environment*"
+      whenReady(settingsDataStore.retrieveApplications(wildcardQuery), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardApplication, testApplication)))
+      }
+
+      assertLogEvents("retrieveApplications", 1, wildcardQuery)
+    }
+
+    it("Handles leading wildcard searches for environments") {
+      val wildcardQuery = "*:wildcard"
+      whenReady(settingsDataStore.retrieveApplications(wildcardQuery), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardApplication)))
+      }
+
+      assertLogEvents("retrieveApplications", 1, wildcardQuery)
+    }
   }
 
   describe("scopes") {
@@ -208,6 +262,53 @@ abstract class SettingsDataStoreTests
 
       assertLogEvents("retrieveScopes", 1, nonExistentSegment)
     }
+
+    it("Finds a scope given a leading wildcard in the environment") {
+      val wildcardEnvironmentSearch = "*:wildcard"
+      whenReady(settingsDataStore.retrieveScopes(wildcardEnvironmentSearch, wildcardApplication), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardScope)))
+      }
+
+      assertLogEvents("retrieveScopes", 1, wildcardEnvironmentSearch, wildcardApplication)
+    }
+
+    it("Finds a scope given a leading wildcard in the environment and application") {
+      val wildcardSearch = "*:wildcard"
+      whenReady(settingsDataStore.retrieveScopes(wildcardSearch, wildcardSearch), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardScope)))
+      }
+
+      assertLogEvents("retrieveScopes", 1, wildcardSearch)
+    }
+
+    it("Finds a scope given a trailing wildcard in the environment") {
+      val wildcardEnvironmentSearch = "environment:*"
+      whenReady(settingsDataStore.retrieveScopes(wildcardEnvironmentSearch, wildcardApplication), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardScope)))
+      }
+
+      assertLogEvents("retrieveScopes", 1, wildcardEnvironmentSearch, wildcardApplication)
+    }
+
+    it("Finds a scope given a trailing wildcard in the environment and application") {
+      val wildcardEnvironmentSearch = "environment:*"
+      val wildcardApplicationSearch = "application:*"
+      whenReady(settingsDataStore.retrieveScopes(wildcardEnvironmentSearch, wildcardApplicationSearch), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardScope)))
+      }
+
+      assertLogEvents("retrieveScopes", 1, wildcardEnvironmentSearch, wildcardApplicationSearch)
+    }
+
+    it("Finds a scope given a embedded wildcard in the environment and application") {
+      val wildcardEnvironmentSearch = "environ*wildcard"
+      val wildcardApplicationSearch = "app*card"
+      whenReady(settingsDataStore.retrieveScopes(wildcardEnvironmentSearch, wildcardApplicationSearch), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardScope)))
+      }
+
+      assertLogEvents("retrieveScopes", 1, wildcardEnvironmentSearch, wildcardApplicationSearch)
+    }
   }
 
   describe("settings") {
@@ -225,6 +326,65 @@ abstract class SettingsDataStoreTests
       }
 
       assertLogEvents("retrieveSettings", 1, nonExistentSegment)
+    }
+
+    it("Finds a setting given a leading wildcard in the environment") {
+      val wildcardEnvironmentSearch = "*:wildcard"
+      whenReady(settingsDataStore.retrieveSettings(wildcardEnvironmentSearch, wildcardApplication, wildcardScope), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplication, wildcardScope)
+    }
+
+    it("Finds a setting given a leading wildcard in the environment and application") {
+      val wildcardSearch = "*:wildcard"
+      whenReady(settingsDataStore.retrieveSettings(wildcardSearch, wildcardSearch, wildcardScope), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardSearch, wildcardScope)
+    }
+
+    it("Finds a setting given a trailing wildcard in the environment") {
+      val wildcardEnvironmentSearch = "environment:*"
+      whenReady(settingsDataStore.retrieveSettings(wildcardEnvironmentSearch, wildcardApplication, wildcardScope), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplication, wildcardScope)
+    }
+
+    it("Finds a setting given a trailing wildcard in the environment and application") {
+      val wildcardEnvironmentSearch = "environment:*"
+      val wildcardApplicationSearch = "application:*"
+      whenReady(settingsDataStore.retrieveSettings(wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScope), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScope)
+    }
+
+    it("Finds a setting given a trailing wildcard in the environment, application, and scope") {
+      val wildcardEnvironmentSearch = "environment:*"
+      val wildcardApplicationSearch = "application:*"
+      val wildcardScopeSearch = "scope:*"
+      whenReady(settingsDataStore.retrieveSettings(wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScopeSearch), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScopeSearch)
+    }
+
+    it("Finds a setting given a embedded wildcard in the environment, application, and scope") {
+      val wildcardEnvironmentSearch = "environ*wildcard"
+      val wildcardApplicationSearch = "app*card"
+      val wildcardScopeSearch = "sco*card"
+      whenReady(settingsDataStore.retrieveSettings(wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScopeSearch), Timeout(Span.Max)) { result =>
+        result should be(DataStoreResults.Found(List[String](wildcardSetting)))
+      }
+
+      assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScopeSearch)
     }
   }
 }

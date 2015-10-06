@@ -38,7 +38,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
       recordValue(Commons.KeyStrings.ApplicationKey, application)
       executeInCollection { collection =>
-        val results = collection.distinct("key.scope", MongoDBObject("key.environment" -> environment, "key.application" -> application))
+        val results = collection.distinct("key.scope", MongoDBObject("key.environment" -> checkWildcards(environment), "key.application" -> checkWildcards(application)))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
           case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' combination was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
@@ -57,9 +57,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         val results = collection.distinct(
           "key.setting",
           MongoDBObject(
-            "key.environment" -> environment,
-            "key.application" -> application,
-            "key.scope" -> scope))
+            "key.environment" -> checkWildcards(environment),
+            "key.application" -> checkWildcards(application),
+            "key.scope" -> checkWildcards(scope)))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
           case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' combination was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
@@ -74,7 +74,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
 
       executeInCollection { collection =>
-        val results = collection.distinct("key.application", MongoDBObject("key.environment" -> environment))
+        val searchTerm = checkWildcards(environment)
+        val results = collection.distinct("key.application", MongoDBObject("key.environment" -> searchTerm))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
           case Nil => DataStoreResults.NotFound(s"environment '$environment' was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
@@ -103,10 +104,13 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue(Commons.KeyStrings.SettingKey, setting)
       executeInCollection { collection =>
         import com.mongodb.casbah.Imports._
-
-        val query = $or(("key.environment" $eq environment) :: ("key.environment" $eq ConfigurationFactory.DefaultEnvironment)) ++
-          $and("key.application" $eq application, "key.scope" $eq scope, "key.setting" $eq setting)
-        collection.find(query).toList match {
+        val environmentQuery = checkWildcards(environment)
+        val applicationQuery = checkWildcards(application)
+        val scopeQuery = checkWildcards(scope)
+        val settingQuery = checkWildcards(setting)
+        val configurationQuery = $or(("key.environment" $eq environmentQuery) :: ("key.environment" $eq ConfigurationFactory.DefaultEnvironment)) ++
+          $and("key.application" $eq applicationQuery, "key.scope" $eq scopeQuery, "key.setting" $eq settingQuery)
+        collection.find(configurationQuery).toList match {
           case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
           case list => list.map(fromMongoDbObject).filter(_.isActive) match {
             case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
@@ -145,6 +149,15 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
       )
     )
+  }
+
+  private def checkWildcards(input: String) = {
+    if(input.indexOf(".*") > -1)
+      input.r
+    else if(input.indexOf("*") > -1)
+      input.replace("*", ".*").r
+    else
+      input.r
   }
 
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
