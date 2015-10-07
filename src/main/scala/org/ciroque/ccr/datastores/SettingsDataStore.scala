@@ -1,12 +1,14 @@
 package org.ciroque.ccr.datastores
 
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
-import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.ciroque.ccr.models.ConfigurationFactory.{Key, Configuration}
 import org.slf4j.Logger
 
 import scala.concurrent.Future
 
 abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
+
+  final val SOURCE_ID_MAX_LENGTH = 64
 
   def upsertConfiguration(configuration: Configuration): Future[DataStoreResult]
 
@@ -27,5 +29,13 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
       input.replace("*", ".*").r
     else
       input.r
+  }
+
+  protected def validateKey(key: Key): Key = {
+    key.sourceId match {
+      case Some(sourceIdValue) if sourceIdValue.length > SOURCE_ID_MAX_LENGTH =>
+        key.copy(sourceId = Some(sourceIdValue.substring(0, SOURCE_ID_MAX_LENGTH)))
+      case _ => key
+    }
   }
 }

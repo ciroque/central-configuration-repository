@@ -23,11 +23,13 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
+    val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
     withImplicitLogging("MongoSettingsDataStore::upsertConfiguration") {
-      recordValue("added-configuration", configuration.toJson.toString())
+      recordValue("given-configuration", configuration.toJson.toString())
+      recordValue("added-configuration", validatedConfiguration.toJson.toString())
       executeInCollection { collection =>
-        collection += toMongoDbObject(configuration)
-        DataStoreResults.Added(configuration)
+        collection += toMongoDbObject(validatedConfiguration)
+        DataStoreResults.Added(validatedConfiguration)
       }
     }
   }

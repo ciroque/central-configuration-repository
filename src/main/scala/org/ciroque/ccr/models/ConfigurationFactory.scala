@@ -19,11 +19,11 @@ object ConfigurationFactory extends DefaultJsonProtocol {
     }
   }
 
-  implicit val KeyResponseFormat = jsonFormat4(Key.apply)
+  implicit val KeyResponseFormat = jsonFormat5(Key.apply)
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
 
-  case class Key(environment: String, application: String, scope: String, setting: String)
+  case class Key(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None)
 
   case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
 
@@ -59,9 +59,22 @@ object ConfigurationFactory extends DefaultJsonProtocol {
             effectiveAt: DateTime,
             expiresAt: DateTime,
             ttl: Long): Configuration = {
+    apply(id, environment, application, scope, setting, None, value, effectiveAt, expiresAt, ttl)
+  }
+
+  def apply(id: UUID,
+            environment: String,
+            application: String,
+            scope: String,
+            setting: String,
+            sourceId: Option[String],
+            value: String,
+            effectiveAt: DateTime,
+            expiresAt: DateTime,
+            ttl: Long): Configuration = {
     new Configuration(
       id,
-      new Key(environment, application, scope, setting),
+      new Key(environment, application, scope, setting, sourceId),
       value,
       new Temporality(effectiveAt, expiresAt, ttl)
     )

@@ -15,9 +15,11 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore::upsertConfiguration") {
-      recordValue("added-configuration", configuration.toJson.toString())
-      configurations = configurations :+ configuration
-      Future.successful(DataStoreResults.Added(configuration))
+      val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
+      recordValue("given-configuration", configuration.toJson.toString())
+      recordValue("added-configuration", validatedConfiguration.toJson.toString())
+      configurations = configurations :+ validatedConfiguration
+      Future.successful(DataStoreResults.Added(validatedConfiguration))
     }
   }
 

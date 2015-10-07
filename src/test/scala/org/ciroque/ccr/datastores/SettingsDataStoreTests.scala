@@ -1,5 +1,7 @@
 package org.ciroque.ccr.datastores
 
+import java.util.UUID
+
 import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
@@ -48,6 +50,8 @@ abstract class SettingsDataStoreTests
   val wildcardSetting: String = "setting:wildcard"
 
   val nonExistentSegment: String = "non-existent"
+
+  val uniqueEnvironment = "UNIQ:Environment"
 
   val testConfiguration = ConfigurationFactory(
     testEnvironment,
@@ -121,7 +125,7 @@ abstract class SettingsDataStoreTests
 
     it("Upserts a valid configuration") {
       whenReady(settingsDataStore.upsertConfiguration(testConfiguration), Timeout(Span.Max)) {
-        retrievedConfiguration =>11
+        retrievedConfiguration =>
           retrievedConfiguration should be(DataStoreResults.Added(testConfiguration))
       }
 
@@ -180,12 +184,62 @@ abstract class SettingsDataStoreTests
 
       assertLogEvents("retrieveConfiguration", 1, leadingWildcardSearch)
     }
+
+    it("Allows inclusion of a sourceKey value in the key field") {
+      val configurationWithSourceId = ConfigurationFactory(
+        UUID.randomUUID(),
+        uniqueEnvironment,
+        "UNIQ:Application",
+        "UNIQ:Scope",
+        "UNIQ:Setting",
+        Some("UNIQ:SourceId"),
+        "UNIQUE_VALUE",
+        DateTime.now().minusDays(2),
+        DateTime.now().plusDays(2),
+        10L
+      )
+
+      whenReady(settingsDataStore.upsertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+        retrievedConfiguration =>
+          retrievedConfiguration should be(DataStoreResults.Added(configurationWithSourceId))
+      }
+    }
+
+    it("restricts the sourceId to 64 characters") {
+      val uniqueApplication: String = "UNIQ:Application"
+      val uniqueScope: String = "UNIQ:Scope"
+      val uniqueSetting: String = "UNIQ:Setting"
+      val sourceId = "1234567890123456789012345678901234567890123456789012345678901234567890"
+      val configurationWithSourceId = ConfigurationFactory(
+        UUID.randomUUID(),
+        uniqueEnvironment,
+        uniqueApplication,
+        uniqueScope,
+        uniqueSetting,
+        Some(sourceId),
+        "UNIQUE_VALUE",
+        DateTime.now().minusDays(2),
+        DateTime.now().plusDays(2),
+        10L
+      )
+
+      val expectedSourceId = "1234567890123456789012345678901234567890123456789012345678901234"
+      val expectedKey = ConfigurationFactory.Key(uniqueEnvironment, uniqueApplication, uniqueScope, uniqueSetting, Some(expectedSourceId))
+      val expectedConfiguration = configurationWithSourceId.copy(key = expectedKey)
+
+      whenReady(settingsDataStore.upsertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+        retrievedConfiguration =>
+          retrievedConfiguration should be(DataStoreResults.Added(expectedConfiguration))
+      }
+
+      assertLogEvents("upsertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
+    }
   }
 
   describe("environments") {
     it("Returns the correct environments") {
       whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.Found(List[String]("default", devEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
+        result should be(DataStoreResults.Found(List[String](uniqueEnvironment, "default", devEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
       }
 
       assertLogEvents("retrieveEnvironments", 1)
