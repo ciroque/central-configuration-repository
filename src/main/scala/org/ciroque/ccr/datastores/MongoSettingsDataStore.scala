@@ -151,15 +151,6 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     )
   }
 
-  private def checkWildcards(input: String) = {
-    if(input.indexOf(".*") > -1)
-      input.r
-    else if(input.indexOf("*") > -1)
-      input.replace("*", ".*").r
-    else
-      input
-  }
-
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
     import org.ciroque.ccr.core.Commons
     RegisterJodaTimeConversionHelpers()

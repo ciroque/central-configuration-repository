@@ -58,12 +58,18 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       recordValue(Commons.KeyStrings.ApplicationKey, application)
       recordValue(Commons.KeyStrings.ScopeKey, scope)
       recordValue(Commons.KeyStrings.SettingKey, setting)
+
+      val environmentRegex = checkWildcards(environment)
+      val applicationRegex = checkWildcards(application)
+      val scopeRegex = checkWildcards(scope)
+      val settingRegex = checkWildcards(setting)
+
       val configs = applyFilter(
         conf =>
-          (conf.key.environment == environment || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
-            && conf.key.application == application
-            && conf.key.scope == scope
-            && conf.key.setting == setting
+          (environmentRegex.findFirstIn(conf.key.environment).isDefined || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
+            && applicationRegex.findFirstIn(conf.key.application).isDefined
+            && scopeRegex.findFirstIn(conf.key.scope).isDefined
+            && settingRegex.findFirstIn(conf.key.setting).isDefined
       )
 
       def findActives = configs.filter(_.isActive)
@@ -88,22 +94,31 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
   }
 
   private def applicationsIn(environment: String): List[String] = {
+    val regex = checkWildcards(environment)
     filteredMappedSorted(
-      conf => conf.key.environment == environment,
+      conf => regex.findFirstIn(conf.key.environment).isDefined,
       conf => conf.key.application
     )
   }
 
   private def scopesIn(environment: String, application: String): List[String] = {
+    val environmentRegex = checkWildcards(environment)
+    val applicationRegex = checkWildcards(application)
     filteredMappedSorted(
-      conf => conf.key.environment == environment && conf.key.application == application,
+      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
+        && applicationRegex.findFirstIn(conf.key.application).isDefined,
       conf => conf.key.scope
     )
   }
 
   private def settingsIn(environment: String, application: String, scope: String): List[String] = {
+    val environmentRegex = checkWildcards(environment)
+    val applicationRegex = checkWildcards(application)
+    val scopeRegex = checkWildcards(scope)
     filteredMappedSorted(
-      conf => conf.key.environment == environment && conf.key.application == application && conf.key.scope == scope,
+      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
+        && applicationRegex.findFirstIn(conf.key.application).isDefined
+        && scopeRegex.findFirstIn(conf.key.scope).isDefined,
       conf => conf.key.setting)
   }
 

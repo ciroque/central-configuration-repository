@@ -19,4 +19,13 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
   def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult]
 
   def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult]
+
+  protected def checkWildcards(input: String) = {
+    if(input.indexOf(".*") > -1)
+      input.r
+    else if(input.indexOf("*") > -1)
+      input.replace("*", ".*").r
+    else
+      input.r
+  }
 }
