@@ -97,13 +97,15 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     }
   }
 
-  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
+  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult] = {
     withImplicitLogging("MongoSettingsDataStore.retrieveConfiguration") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
       recordValue(Commons.KeyStrings.ApplicationKey, application)
       recordValue(Commons.KeyStrings.ScopeKey, scope)
       recordValue(Commons.KeyStrings.SettingKey, setting)
+      recordValue(Commons.KeyStrings.SourceIdKey, sourceId.toString)
+
       executeInCollection { collection =>
         import com.mongodb.casbah.Imports._
         val environmentQuery = checkWildcards(environment)
@@ -116,7 +118,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
           case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
           case list => list.map(fromMongoDbObject).filter(_.isActive) match {
             case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
-            case found: Seq[Configuration] => Found(found)
+            case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
           }
         }
       }
@@ -136,14 +138,20 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   private def toMongoDbObject(configuration: Configuration) = {
     import org.ciroque.ccr.core.Commons
     RegisterJodaTimeConversionHelpers()
-    MongoDBObject(
+
+    val coreKeys = List((Commons.KeyStrings.EnvironmentKey, configuration.key.environment)
+      , (Commons.KeyStrings.ApplicationKey, configuration.key.application)
+      , (Commons.KeyStrings.ScopeKey, configuration.key.scope)
+      , (Commons.KeyStrings.SettingKey, configuration.key.setting))
+
+    val keyValues = configuration.key.sourceId match {
+      case None => coreKeys
+      case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
+    }
+
+    val mdbo = MongoDBObject(
       Commons.KeyStrings.IdKey -> configuration._id,
-      Commons.KeyStrings.KeyKey -> MongoDBObject(
-        Commons.KeyStrings.EnvironmentKey -> configuration.key.environment,
-        Commons.KeyStrings.ApplicationKey -> configuration.key.application,
-        Commons.KeyStrings.ScopeKey -> configuration.key.scope,
-        Commons.KeyStrings.SettingKey -> configuration.key.setting
-      ),
+      Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
       Commons.KeyStrings.ValueKey -> configuration.value,
       Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
         Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
@@ -151,6 +159,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
       )
     )
+
+    mdbo
   }
 
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
@@ -160,12 +170,18 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     val key = db.get(Commons.KeyStrings.KeyKey).asInstanceOf[DBObject]
     val temporalization = db.get(Commons.KeyStrings.TemporalizationKey).asInstanceOf[DBObject]
 
+    val sourceId = if(key.containsField(Commons.KeyStrings.SourceIdKey))
+      Some(key.get(Commons.KeyStrings.SourceIdKey).toString)
+    else
+      None
+
     ConfigurationFactory(
       UUID.fromString(db.get(Commons.KeyStrings.IdKey).toString),
       key.get(Commons.KeyStrings.EnvironmentKey).toString,
       key.get(Commons.KeyStrings.ApplicationKey).toString,
       key.get(Commons.KeyStrings.ScopeKey).toString,
       key.get(Commons.KeyStrings.SettingKey).toString,
+      sourceId,
       db.get(Commons.KeyStrings.ValueKey).toString,
       temporalization.get(Commons.KeyStrings.EffectiveAtKey).asInstanceOf[DateTime],
       temporalization.get(Commons.KeyStrings.ExpiresAtKey).asInstanceOf[DateTime],

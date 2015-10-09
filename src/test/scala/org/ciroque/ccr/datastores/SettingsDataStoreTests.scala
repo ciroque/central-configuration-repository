@@ -51,7 +51,9 @@ abstract class SettingsDataStoreTests
 
   val nonExistentSegment: String = "non-existent"
 
+  val sourceIdEnvironment = "env:sourceid"
   val uniqueEnvironment = "UNIQ:Environment"
+  val sourceId = UUID.randomUUID()
 
   val testConfiguration = ConfigurationFactory(
     testEnvironment,
@@ -67,6 +69,18 @@ abstract class SettingsDataStoreTests
   val activeLogLevelConfiguration: Configuration = ConfigurationFactory(prodEnvironment, application3, loggingScope, logLevelSetting, "ALL", DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L)
   val defaultLogRotationConfiguration: Configuration = ConfigurationFactory("default", "app4", loggingScope, logRotationSetting, "12hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L)
   val wildcardConfiguration: Configuration = ConfigurationFactory(wildcardEnvironment, wildcardApplication, wildcardScope, wildcardSetting, "WILDCARD", DateTime.now().minusDays(2), DateTime.now().plusDays(2), 360000L)
+
+  val configurationWithSourceId: Configuration = ConfigurationFactory(
+    UUID.randomUUID(),
+    sourceIdEnvironment,
+    "app:sourceid",
+    "scp:sourceid",
+    "stg:sourceid",
+    Some(sourceId.toString),
+    "SOURCE_ID_VALUE",
+    DateTime.now().minusDays(7),
+    DateTime.now().plusDays(7),
+    5 * 60 * 1000L)
 
   override def beforeEach(): Unit = {
     import org.ciroque.ccr.logging.CachingLogger
@@ -111,6 +125,9 @@ abstract class SettingsDataStoreTests
     settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, "app4", loggingScope, logRotationSetting, "24hours", DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
 
     settingsDataStore.upsertConfiguration(wildcardConfiguration)
+
+    settingsDataStore.upsertConfiguration(configurationWithSourceId)
+    settingsDataStore.upsertConfiguration(configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some("012345")), value = "SOMETHING_DIFFERENT"))
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -142,7 +159,7 @@ abstract class SettingsDataStoreTests
               conf.head.isActive should be(true)
             case something => fail(s"Expected to get a Configuration. Got a $something instead")
           }
-        case NotFound(msg) => fail(s">>>>>>>>>>>>> $msg")
+        case NotFound(msg) => fail(s"NotFound -> $msg")
       }
 
       assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application3, loggingScope, logLevelSetting)
@@ -234,12 +251,34 @@ abstract class SettingsDataStoreTests
 
       assertLogEvents("upsertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
     }
+
+    it("allows filtering by the sourceId") {
+      whenReady(
+        settingsDataStore.retrieveConfiguration(
+        configurationWithSourceId.key.environment,
+        configurationWithSourceId.key.application,
+        configurationWithSourceId.key.scope,
+        configurationWithSourceId.key.setting,
+        Some(sourceId.toString)),
+        Timeout(Span.Max)) {
+
+        case Found(config) =>
+          config match {
+            case conf: List[Configuration] =>
+              conf.size should be(1)
+              conf.head should be(configurationWithSourceId)
+              conf.head.isActive should be(true)
+            case something => fail(s"Expected to get a Configuration. Got a $something instead.")
+          }
+        case NotFound(msg) => fail(s"NotFound -> $msg")
+      }
+    }
   }
 
   describe("environments") {
     it("Returns the correct environments") {
       whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.Found(List[String](uniqueEnvironment, "default", devEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
+        result should be(DataStoreResults.Found(List[String](uniqueEnvironment, "default", devEnvironment, sourceIdEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
       }
 
       assertLogEvents("retrieveEnvironments", 1)

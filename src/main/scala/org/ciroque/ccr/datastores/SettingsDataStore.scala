@@ -20,7 +20,7 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
 
   def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult]
 
-  def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult]
+  def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult]
 
   protected def checkWildcards(input: String) = {
     if(input.indexOf(".*") > -1)
@@ -29,6 +29,16 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
       input.replace("*", ".*").r
     else
       input.r
+  }
+
+  protected def filterBySourceId(list: List[Configuration], sourceId: Option[String]): List[Configuration] = {
+    sourceId match {
+      case None => list
+      case Some(_) => list.filter(c => c.key.sourceId == sourceId) match {
+        case Nil => list
+        case filtered => filtered
+      }
+    }
   }
 
   protected def validateKey(key: Key): Key = {

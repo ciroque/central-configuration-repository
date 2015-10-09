@@ -221,7 +221,7 @@ trait ConfigurationProviderService
 
             completeRoute[ConfigurationFactory.Configuration](
               ctxt,
-              dataStore.retrieveConfiguration(environment, application, scope, setting),
+              dataStore.retrieveConfiguration(environment, application, scope, setting, None),
               list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
               hyperMediaResponseFactory,
               Commons.failureResponseFactory,

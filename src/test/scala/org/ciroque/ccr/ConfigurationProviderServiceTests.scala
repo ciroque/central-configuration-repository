@@ -6,7 +6,6 @@ import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse, InternalServerErrorResponse}
 import org.ciroque.ccr.stats.AccessStatsClient
 import org.easymock.EasyMock._
@@ -238,7 +237,7 @@ class ConfigurationProviderServiceTests
       it("should return a 404 when the setting name is not found") {
         val notFoundMessage: String = s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found"
         expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
+          dataStore.retrieveConfiguration(environment, application, scope, setting, None).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(settingUri) ~> routes ~> check {
@@ -257,23 +256,24 @@ class ConfigurationProviderServiceTests
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs") {
-        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting", dataStore.retrieveConfiguration(environment, application, scope, setting, None))
         assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
-        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting))
+        verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting, None))
         assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
       }
 
       def assertConfigurationEndpoint(uri: String): Unit = {
         expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting).andReturn(futureSuccessfulDataStoreResult(List(configuration)))
+          dataStore.retrieveConfiguration(environment, application, scope, setting, None).andReturn(futureSuccessfulDataStoreResult(List(configuration)))
         }
         whenExecuting(dataStore) {
           Get(uri) ~> routes ~> check {
             status should equal(StatusCodes.OK)
             assertCorsHeaders(headers)
+            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             val conf = responseAs[ConfigurationResponse]
             conf.configuration.size should equal(1)
             conf.configuration.head.toJson.toString should equal(configuration.toJson.toString())

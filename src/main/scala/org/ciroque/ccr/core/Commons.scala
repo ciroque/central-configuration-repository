@@ -15,6 +15,7 @@ object Commons {
     final val ApplicationKey = "application"
     final val ScopeKey = "scope"
     final val SettingKey = "setting"
+    final var SourceIdKey = "sourceId"
     final val EffectiveAtKey = "effectiveAt"
     final val ExpiresAtKey = "expiresAt"
     final val TtlKey = "ttl"

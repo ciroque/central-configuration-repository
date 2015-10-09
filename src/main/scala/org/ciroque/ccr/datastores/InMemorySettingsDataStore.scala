@@ -53,7 +53,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
-  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
+  override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore.retrieveConfiguration") {
       import org.ciroque.ccr.core.Commons
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
@@ -80,7 +80,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
         case Nil => NotFound(s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' combination was not found")
         case _ => findActives match {
           case Nil => NotFound(s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' found no active configuration")
-          case found: Seq[Configuration] => Found(found)
+          case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
         }
       }
 
