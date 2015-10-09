@@ -54,6 +54,7 @@ abstract class SettingsDataStoreTests
   val sourceIdEnvironment = "env:sourceid"
   val uniqueEnvironment = "UNIQ:Environment"
   val sourceId = UUID.randomUUID()
+  val secondSourceId = UUID.randomUUID().toString
 
   val testConfiguration = ConfigurationFactory(
     testEnvironment,
@@ -127,7 +128,7 @@ abstract class SettingsDataStoreTests
     settingsDataStore.upsertConfiguration(wildcardConfiguration)
 
     settingsDataStore.upsertConfiguration(configurationWithSourceId)
-    settingsDataStore.upsertConfiguration(configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some("012345")), value = "SOMETHING_DIFFERENT"))
+    settingsDataStore.upsertConfiguration(configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some(secondSourceId)), value = "SOMETHING_DIFFERENT"))
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -268,6 +269,29 @@ abstract class SettingsDataStoreTests
               conf.size should be(1)
               conf.head should be(configurationWithSourceId)
               conf.head.isActive should be(true)
+            case something => fail(s"Expected to get a Configuration. Got a $something instead.")
+          }
+        case NotFound(msg) => fail(s"NotFound -> $msg")
+      }
+    }
+
+    it("returns all the configurations when the sourceId is not matched") {
+      whenReady(
+        settingsDataStore.retrieveConfiguration(
+        configurationWithSourceId.key.environment,
+        configurationWithSourceId.key.application,
+        configurationWithSourceId.key.scope,
+        configurationWithSourceId.key.setting,
+        Some("NOT_THERE")),
+        Timeout(Span.Max)) {
+
+        case Found(config) =>
+          config match {
+            case conf: List[Configuration] =>
+              conf.size should be(2)
+              conf.head should be(configurationWithSourceId)
+              conf.head.isActive should be(true)
+              conf.last.key.sourceId should be(Some(secondSourceId))
             case something => fail(s"Expected to get a Configuration. Got a $something instead.")
           }
         case NotFound(msg) => fail(s"NotFound -> $msg")
