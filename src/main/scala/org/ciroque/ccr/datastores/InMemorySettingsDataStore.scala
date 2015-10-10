@@ -1,13 +1,13 @@
 package org.ciroque.ccr.datastores
 
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
-import org.ciroque.ccr.logging.ImplicitLogging._
 import org.slf4j.Logger
 
 import scala.concurrent.Future
-import org.ciroque.ccr.core.Commons
 
 class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDataStore {
 

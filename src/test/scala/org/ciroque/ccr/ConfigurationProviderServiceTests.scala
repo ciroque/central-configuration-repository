@@ -47,6 +47,7 @@ class ConfigurationProviderServiceTests
     val application = Commons.KeyStrings.ApplicationKey
     val scope = "logging"
     val setting = "log-level"
+    val sourceId = "SOME_SOURCEID"
 
     val environments = List("global", "dev", "qa", "prod")
     val applications = List("web app", "service app", "mobile app")
@@ -210,15 +211,18 @@ class ConfigurationProviderServiceTests
     }
 
     describe("configuration route") {
+      import java.util.UUID
       val effectiveAt = DateTime.now().minusDays(30)
       val expiresAt = DateTime.now().plusDays(30)
       val ttl = 1000 * 60 * 60 * 24 // 24 little hours
       val settingUri = s"$settingsPath/$environment/$application/$scope/$setting"
       val configuration = ConfigurationFactory(
+        UUID.randomUUID,
         environment,
         application,
         scope,
         setting,
+        Some(sourceId),
         "DEBUG",
         effectiveAt,
         expiresAt,
@@ -263,6 +267,19 @@ class ConfigurationProviderServiceTests
       it("should respond with a 500 and general messaging when a DataStore failure occurs with trailing slash") {
         verifyGetWithDataStoreFailure(s"/$environment/$application/$scope/$setting/", dataStore.retrieveConfiguration(environment, application, scope, setting, None))
         assertLogEvents("ConfigurationProviderService::configurationRoute", 1, environment, application, scope, setting)
+      }
+
+      it("returns a single Configuration matching on the source id") {
+        val uri = s"$settingUri?sourceId=$sourceId"
+
+        expecting {
+          dataStore.retrieveConfiguration(environment, application, scope, setting, Some(sourceId)).andReturn(futureSuccessfulDataStoreResult(List(configuration)))
+        }
+        whenExecuting(dataStore) {
+          Get(uri) ~> routes ~> check {
+            status should equal(StatusCodes.OK)
+          }
+        }
       }
 
       def assertConfigurationEndpoint(uri: String): Unit = {

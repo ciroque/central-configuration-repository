@@ -56,8 +56,8 @@ class ConfigurationManagementServiceTests
         }
         whenExecuting(dataStore) {
           Post(s"$settingsPath/$testEnvironment/$testApplication/$testScope/$testSetting", testConfiguration) ~> routes ~> check {
-            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             status should equal(StatusCodes.OK)
+            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             val returnedConfiguration = responseAs[ConfigurationResponse]
             returnedConfiguration.configuration.head.toJson should equal(testConfiguration.toJson)
           }

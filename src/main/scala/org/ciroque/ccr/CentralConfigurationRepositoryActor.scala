@@ -8,6 +8,7 @@ import org.ciroque.ccr.datastores.SettingsDataStore
 import org.ciroque.ccr.stats.AccessStatsClient
 import org.slf4j.LoggerFactory
 import spray.routing.HttpServiceActor
+
 import scala.reflect.runtime.universe._
 
 class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStatsClient)

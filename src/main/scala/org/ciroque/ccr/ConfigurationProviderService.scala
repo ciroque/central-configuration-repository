@@ -3,7 +3,7 @@ package org.ciroque.ccr
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import com.wordnik.swagger.annotations.{ApiImplicitParam, Api, ApiImplicitParams, ApiOperation}
+import com.wordnik.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation}
 import org.ciroque.ccr.core.{CcrService, Commons}
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.{CcrTypes, SettingsDataStore}
@@ -266,7 +266,6 @@ trait ConfigurationProviderService
       respondWithHeaders(Commons.corsHeaders) {
         respondWithStatus(Commons.teaPotStatusCode) {
           complete {
-            import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
             HyperMediaMessageResponse(Commons.ApiDocumentationStrings.SeeDocumentation, Map("documentation" -> "/documentation"))
           }
         }

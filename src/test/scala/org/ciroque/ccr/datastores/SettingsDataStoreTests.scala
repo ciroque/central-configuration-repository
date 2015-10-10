@@ -83,6 +83,8 @@ abstract class SettingsDataStoreTests
     DateTime.now().plusDays(7),
     5 * 60 * 1000L)
 
+  val alternateConfigurationWithSourceId = configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some(secondSourceId)), value = "SOMETHING_DIFFERENT")
+
   override def beforeEach(): Unit = {
     import org.ciroque.ccr.logging.CachingLogger
     logger.asInstanceOf[CachingLogger].reset()
@@ -128,7 +130,7 @@ abstract class SettingsDataStoreTests
     settingsDataStore.upsertConfiguration(wildcardConfiguration)
 
     settingsDataStore.upsertConfiguration(configurationWithSourceId)
-    settingsDataStore.upsertConfiguration(configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some(secondSourceId)), value = "SOMETHING_DIFFERENT"))
+    settingsDataStore.upsertConfiguration(alternateConfigurationWithSourceId)
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -289,9 +291,8 @@ abstract class SettingsDataStoreTests
           config match {
             case conf: List[Configuration] =>
               conf.size should be(2)
-              conf.head should be(configurationWithSourceId)
-              conf.head.isActive should be(true)
-              conf.last.key.sourceId should be(Some(secondSourceId))
+              conf.contains(configurationWithSourceId)
+              conf.contains(alternateConfigurationWithSourceId)
             case something => fail(s"Expected to get a Configuration. Got a $something instead.")
           }
         case NotFound(msg) => fail(s"NotFound -> $msg")

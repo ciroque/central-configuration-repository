@@ -1,7 +1,7 @@
 package org.ciroque.ccr.datastores
 
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
-import org.ciroque.ccr.models.ConfigurationFactory.{Key, Configuration}
+import org.ciroque.ccr.models.ConfigurationFactory.{Configuration, Key}
 import org.slf4j.Logger
 
 import scala.concurrent.Future

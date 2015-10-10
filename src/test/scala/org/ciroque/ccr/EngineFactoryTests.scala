@@ -1,7 +1,7 @@
 package org.ciroque.ccr
 
 import org.ciroque.ccr.core.ConfigFactory
-import org.ciroque.ccr.datastores.{SettingsDataStore, MongoSettingsDataStore, InMemorySettingsDataStore}
+import org.ciroque.ccr.datastores.{InMemorySettingsDataStore, MongoSettingsDataStore, SettingsDataStore}
 import org.scalatest.{FunSpec, Matchers}
 
 class EngineFactoryTests extends FunSpec with Matchers {
