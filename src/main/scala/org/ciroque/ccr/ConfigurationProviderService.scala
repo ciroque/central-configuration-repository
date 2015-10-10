@@ -205,28 +205,30 @@ trait ConfigurationProviderService
       paramType = Commons.ApiDocumentationStrings.PathParamType)
   ))
   def configurationRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
-    (environment, application, scope, setting) =>
-      pathEndOrSingleSlash {
-        get { ctxt =>
+    (environment, application, scope, setting) ⇒
+      parameter('sourceId ?) { sourceId ⇒
+        pathEndOrSingleSlash {
+          get { ctxt =>
 
-          def buildHeaders(configurations: List[ConfigurationFactory.Configuration]) = {
-            configurations match {
-              case Nil => Commons.corsHeaders
-              case _ => Commons.corsHeaders :+ RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusMillis(configurations.head.temporality.ttl.toInt).toString())
+            def buildHeaders(configurations: List[ConfigurationFactory.Configuration]) = {
+              configurations match {
+                case Nil => Commons.corsHeaders
+                case _ => Commons.corsHeaders :+ RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusMillis(configurations.head.temporality.ttl.toInt).toString())
+              }
             }
-          }
 
-          withImplicitLoggingAndStats("ConfigurationProviderService::configurationRoute", environment, application, scope, setting) {
-            import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+            withImplicitLoggingAndStats("ConfigurationProviderService::configurationRoute", environment, application, scope, setting) {
+              import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
 
-            completeRoute[ConfigurationFactory.Configuration](
-              ctxt,
-              dataStore.retrieveConfiguration(environment, application, scope, setting, None),
-              list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
-              hyperMediaResponseFactory,
-              Commons.failureResponseFactory,
-              dsr => buildHeaders(dsr)
-            )
+              completeRoute[ConfigurationFactory.Configuration](
+                ctxt,
+                dataStore.retrieveConfiguration(environment, application, scope, setting, sourceId),
+                list => (ConfigurationResponse(list).toJson, StatusCodes.OK),
+                hyperMediaResponseFactory,
+                Commons.failureResponseFactory,
+                dsr => buildHeaders(dsr)
+              )
+            }
           }
         }
       }
@@ -274,10 +276,10 @@ trait ConfigurationProviderService
   }
 
   private def withImplicitLoggingAndStats[T](name: String,
-                                              environment: String,
-                                              application: String,
-                                              scope: String,
-                                              setting: String)(fx: => T) = {
+                                             environment: String,
+                                             application: String,
+                                             scope: String,
+                                             setting: String)(fx: => T) = {
 
     accessStatsClient.recordQuery(environment, application, scope, setting)
     val values = Map(Commons.KeyStrings.EnvironmentKey -> environment, Commons.KeyStrings.ApplicationKey -> application, Commons.KeyStrings.ScopeKey -> scope, Commons.KeyStrings.SettingKey -> setting)
