@@ -38,6 +38,8 @@ trait ConfigurationProviderService
 
   override def getVersion = new SemanticVersion(1, 0, 0)
 
+  def routes = defaultRoute ~ appRoute ~ environmentsRoute ~ applicationsRoute ~ scopesRoute ~ settingsRoute ~ configurationRoute
+
   @ApiOperation(
     value = Commons.ApiDocumentationStrings.RootRoute,
     notes = Commons.ApiDocumentationStrings.SeeDocumentation,
@@ -58,6 +60,18 @@ trait ConfigurationProviderService
     pathEndOrSingleSlash {
       get {
         respondWithTeapot
+      }
+    }
+  }
+
+  private def respondWithTeapot: routing.Route = {
+    respondWithMediaType(`application/json`) {
+      respondWithHeaders(Commons.corsHeaders) {
+        respondWithStatus(Commons.teaPotStatusCode) {
+          complete {
+            HyperMediaMessageResponse(Commons.ApiDocumentationStrings.SeeDocumentation, Map("documentation" -> "/documentation"))
+          }
+        }
       }
     }
   }
@@ -177,6 +191,45 @@ trait ConfigurationProviderService
       }
   }
 
+  private def completeRoute[T](context: RequestContext,
+                               eventualDataStoreResult: Future[DataStoreResult],
+                               foundFactory: List[T] => (JsValue, StatusCode),
+                               notFoundFactory: (String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
+                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory,
+                               generateHeaders: (List[T]) => List[HttpHeaders.RawHeader] = (items: List[T]) => Commons.corsHeaders) = {
+
+    for {
+      entities <- eventualDataStoreResult
+    } yield {
+      val ((jsonResult, statusCode), listOfEntities) = entities match {
+        case Found(items: List[T]) => (foundFactory(items), items)
+        case NotFound(message) => (notFoundFactory(message), List())
+        case Failure(message, cause) => (failureFactory(message, cause), List())
+        case _ => ((s"No match for entities. ${entities.toString}", StatusCodes.InternalServerError), List())
+      }
+
+      context.complete(HttpResponse(
+        statusCode,
+        HttpEntity(`application/json`, jsonResult.toString()),
+        generateHeaders(listOfEntities)))
+    }
+  }
+
+  private def withImplicitLoggingAndStats[T](name: String,
+                                             environment: String,
+                                             application: String,
+                                             scope: String,
+                                             setting: String)(fx: => T) = {
+
+    accessStatsClient.recordQuery(environment, application, scope, setting)
+    val values = Map(Commons.KeyStrings.EnvironmentKey -> environment, Commons.KeyStrings.ApplicationKey -> application, Commons.KeyStrings.ScopeKey -> scope, Commons.KeyStrings.SettingKey -> setting)
+
+    withImplicitLogging(name) {
+      values.filter(thing => thing._2 != "").map(thing => recordValue(thing._1, thing._2))
+      fx
+    }
+  }
+
   @ApiOperation(
     value = Commons.ApiDocumentationStrings.ConfigurationsRoute,
     notes = Commons.ApiDocumentationStrings.ConfigurationsNotes,
@@ -234,59 +287,6 @@ trait ConfigurationProviderService
       }
   }
 
-  def routes = defaultRoute ~ appRoute ~ environmentsRoute ~ applicationsRoute ~ scopesRoute ~ settingsRoute ~ configurationRoute
-
-  private def completeRoute[T](context: RequestContext,
-                               eventualDataStoreResult: Future[DataStoreResult],
-                               foundFactory: List[T] => (JsValue, StatusCode),
-                               notFoundFactory: (String) => (JsValue, StatusCode) = hyperMediaResponseFactory,
-                               failureFactory: (String, Throwable) => (JsValue, StatusCode) = Commons.failureResponseFactory,
-                               generateHeaders: (List[T]) => List[HttpHeaders.RawHeader] = (items: List[T]) => Commons.corsHeaders) = {
-
-    for {
-      entities <- eventualDataStoreResult
-    } yield {
-      val ((jsonResult, statusCode), listOfEntities) = entities match {
-        case Found(items: List[T]) => (foundFactory(items), items)
-        case NotFound(message) => (notFoundFactory(message), List())
-        case Failure(message, cause) => (failureFactory(message, cause), List())
-        case _ => ((s"No match for entities. ${entities.toString}", StatusCodes.InternalServerError), List())
-      }
-
-      context.complete(HttpResponse(
-        statusCode,
-        HttpEntity(`application/json`, jsonResult.toString()),
-        generateHeaders(listOfEntities)))
-    }
-  }
-
   private def hyperMediaResponseFactory(message: String): (JsValue, StatusCode) =
     (new HyperMediaMessageResponse(message, Map()).toJson, StatusCodes.NotFound)
-
-  private def respondWithTeapot: routing.Route = {
-    respondWithMediaType(`application/json`) {
-      respondWithHeaders(Commons.corsHeaders) {
-        respondWithStatus(Commons.teaPotStatusCode) {
-          complete {
-            HyperMediaMessageResponse(Commons.ApiDocumentationStrings.SeeDocumentation, Map("documentation" -> "/documentation"))
-          }
-        }
-      }
-    }
-  }
-
-  private def withImplicitLoggingAndStats[T](name: String,
-                                             environment: String,
-                                             application: String,
-                                             scope: String,
-                                             setting: String)(fx: => T) = {
-
-    accessStatsClient.recordQuery(environment, application, scope, setting)
-    val values = Map(Commons.KeyStrings.EnvironmentKey -> environment, Commons.KeyStrings.ApplicationKey -> application, Commons.KeyStrings.ScopeKey -> scope, Commons.KeyStrings.SettingKey -> setting)
-
-    withImplicitLogging(name) {
-      values.filter(thing => thing._2 != "").map(thing => recordValue(thing._1, thing._2))
-      fx
-    }
-  }
 }

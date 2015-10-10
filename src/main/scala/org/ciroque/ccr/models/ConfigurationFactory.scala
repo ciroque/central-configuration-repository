@@ -9,35 +9,10 @@ import spray.json._
 object ConfigurationFactory extends DefaultJsonProtocol {
 
   val DefaultEnvironment = "default"
-
-  implicit object UuidJsonFormat extends JsonFormat[UUID] {
-    def write(x: UUID) = JsString(x toString())
-
-    def read(value: JsValue) = value match {
-      case JsString(x) => UUID.fromString(x)
-      case x => deserializationError("Expected UUID as JsString, but got " + x)
-    }
-  }
-
   implicit val KeyResponseFormat = jsonFormat5(Key.apply)
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
-
-  case class Key(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None)
-
-  case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
-
-  case class Configuration(_id: UUID, key: Key, value: String, temporality: Temporality) {
-    def isActive = {
-
-      def temporallyActive() = {
-        val now = DateTime.now()
-        now.isAfter(temporality.effectiveAt) && now.isBefore(temporality.expiresAt)
-      }
-
-      key.environment.toLowerCase == DefaultEnvironment || temporallyActive()
-    }
-  }
+  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), "", Temporality(DateTime.now(), DateTime.now(), 0L))
 
   def apply(environment: String,
             application: String,
@@ -80,5 +55,28 @@ object ConfigurationFactory extends DefaultJsonProtocol {
     )
   }
 
-  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), "", Temporality(DateTime.now(), DateTime.now(), 0L))
+  case class Key(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None)
+
+  case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
+
+  case class Configuration(_id: UUID, key: Key, value: String, temporality: Temporality) {
+    def isActive = {
+
+      def temporallyActive() = {
+        val now = DateTime.now()
+        now.isAfter(temporality.effectiveAt) && now.isBefore(temporality.expiresAt)
+      }
+
+      key.environment.toLowerCase == DefaultEnvironment || temporallyActive()
+    }
+  }
+
+  implicit object UuidJsonFormat extends JsonFormat[UUID] {
+    def write(x: UUID) = JsString(x toString())
+
+    def read(value: JsValue) = value match {
+      case JsString(x) => UUID.fromString(x)
+      case x => deserializationError("Expected UUID as JsString, but got " + x)
+    }
+  }
 }

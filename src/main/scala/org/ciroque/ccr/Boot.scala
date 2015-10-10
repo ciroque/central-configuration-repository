@@ -16,19 +16,15 @@ object Boot extends App {
 
   implicit val system = ActorSystem(Commons.KeyStrings.ActorSystemName)
   implicit val timeout = Timeout(5.seconds)
-
-  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
-
   // TODO: Use a factory and configuration to new these up.
   val config = ConfigFactory.load("application.conf")
-  private val dataStore = EngineFactory.buildStorageInstance(config)
-
-  private val accessStatsClient = new RedisAccessStatsClient()
-
   val service = system.actorOf(
     Props(
       new CentralConfigurationRepositoryActor(dataStore, accessStatsClient)),
     "central-configuration-repository-service")
+  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
+  private val dataStore = EngineFactory.buildStorageInstance(config)
+  private val accessStatsClient = new RedisAccessStatsClient()
 
   IO(Http) ? Http.Bind(service, interface = "localhost", port = 35487)
 }

@@ -1,6 +1,7 @@
 package org.ciroque.ccr.datastores
 
 class InMemorySettingsDataStoreTests extends SettingsDataStoreTests {
+
   import org.ciroque.ccr.logging.CachingLogger
   import org.slf4j.Logger
 

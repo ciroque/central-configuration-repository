@@ -7,6 +7,20 @@ import spray.json._
 
 object Commons {
   val rootPath = "ccr"
+  val settingsSegment = "settings"
+  val settingSegment = "setting"
+  val managementSegment = "schedule"
+  val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
+  val corsHeaders = List(
+    RawHeader("Access-Control-Allow-Origin", "*"),
+    RawHeader("Access-Control-Allow-Headers", "Content-Type"),
+    RawHeader("Access-Control-Allow-Methods", "GET,PUT")
+  )
+
+  def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) = {
+    import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
+    (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
+  }
 
   object KeyStrings {
     final val ActorSystemName = "central-configuration-repository-system"
@@ -15,7 +29,6 @@ object Commons {
     final val ApplicationKey = "application"
     final val ScopeKey = "scope"
     final val SettingKey = "setting"
-    final var SourceIdKey = "sourceId"
     final val EffectiveAtKey = "effectiveAt"
     final val ExpiresAtKey = "expiresAt"
     final val TtlKey = "ttl"
@@ -23,6 +36,7 @@ object Commons {
     final val TemporalizationKey = "temporalization"
     final val KeyKey = "key"
     final val ValueKey = "value"
+    final var SourceIdKey = "sourceId"
   }
 
   object ApiDocumentationStrings {
@@ -50,23 +64,5 @@ object Commons {
     final val ScopesRoute = "Retrieve Scopes"
     final val StringDataType = "String"
     final val TermsOfServiceUri = ""
-  }
-
-
-  val settingsSegment = "settings"
-  val settingSegment = "setting"
-  val managementSegment = "schedule"
-
-  val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
-
-  val corsHeaders = List(
-    RawHeader("Access-Control-Allow-Origin", "*"),
-    RawHeader("Access-Control-Allow-Headers", "Content-Type"),
-    RawHeader("Access-Control-Allow-Methods", "GET,PUT")
-  )
-
-  def failureResponseFactory(message: String, cause: Throwable): (JsValue, StatusCode) = {
-    import org.ciroque.ccr.responses.InternalServerErrorResponseProtocol._
-    (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
   }
 }

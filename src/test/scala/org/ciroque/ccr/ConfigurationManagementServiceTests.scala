@@ -82,10 +82,10 @@ class ConfigurationManagementServiceTests
     }
   }
 
+  override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
+
   override def beforeEach() =
     reset(dataStore)
-
-  override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
 
   override def actorRefFactory: ActorRefFactory = system
 }

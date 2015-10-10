@@ -258,11 +258,11 @@ abstract class SettingsDataStoreTests
     it("allows filtering by the sourceId") {
       whenReady(
         settingsDataStore.retrieveConfiguration(
-        configurationWithSourceId.key.environment,
-        configurationWithSourceId.key.application,
-        configurationWithSourceId.key.scope,
-        configurationWithSourceId.key.setting,
-        Some(sourceId.toString)),
+          configurationWithSourceId.key.environment,
+          configurationWithSourceId.key.application,
+          configurationWithSourceId.key.scope,
+          configurationWithSourceId.key.setting,
+          Some(sourceId.toString)),
         Timeout(Span.Max)) {
 
         case Found(config) =>
@@ -280,11 +280,11 @@ abstract class SettingsDataStoreTests
     it("returns all the configurations when the sourceId is not matched") {
       whenReady(
         settingsDataStore.retrieveConfiguration(
-        configurationWithSourceId.key.environment,
-        configurationWithSourceId.key.application,
-        configurationWithSourceId.key.scope,
-        configurationWithSourceId.key.setting,
-        Some("NOT_THERE")),
+          configurationWithSourceId.key.environment,
+          configurationWithSourceId.key.application,
+          configurationWithSourceId.key.scope,
+          configurationWithSourceId.key.setting,
+          Some("NOT_THERE")),
         Timeout(Span.Max)) {
 
         case Found(config) =>

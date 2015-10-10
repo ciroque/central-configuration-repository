@@ -40,13 +40,13 @@ object ConfigFactory {
     def getParamsConfig: Config = {
       val defaultConfigString = s"""$hostnameKey"": ""localhost"",""$databaseKey"": ""ccr"",""$catalogKey"": ""settings"""
       val defaultConfig = TSConfigFactory.parseString(defaultConfigString)
-      val params = if(config.hasPath(ccrKey)) {
+      val params = if (config.hasPath(ccrKey)) {
         val ccrConfig = config.getConfig(ccrKey)
-        if(ccrConfig.hasPath(enginesKey)) {
+        if (ccrConfig.hasPath(enginesKey)) {
           val enginesConfig = ccrConfig.getConfig(enginesKey)
-          if(enginesConfig.hasPath(datastoreKey)) {
+          if (enginesConfig.hasPath(datastoreKey)) {
             val datastoreConfig = enginesConfig.getConfig(datastoreKey)
-            if(datastoreConfig.hasPath(paramsKey)) {
+            if (datastoreConfig.hasPath(paramsKey)) {
               Some(datastoreConfig.getConfig(paramsKey))
             } else
               None
@@ -66,12 +66,12 @@ object ConfigFactory {
     val realizedConfig = getParamsConfig
 
     def getValueOrNull(key: String): String = {
-      if(realizedConfig.hasPath(key)) realizedConfig.getString(key)
+      if (realizedConfig.hasPath(key)) realizedConfig.getString(key)
       else null
     }
 
     def getValueOption(key: String): Option[Int] = {
-      if(realizedConfig.hasPath(key)) Some(realizedConfig.getInt(key))
+      if (realizedConfig.hasPath(key)) Some(realizedConfig.getInt(key))
       else None
     }
 

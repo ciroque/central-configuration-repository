@@ -9,8 +9,6 @@ object ImplicitLogging {
 
   private[logging] val activeLoggers = new ThreadLocal[LogEntryBuilder]
 
-  def getCurrentImplicitLogger = activeLoggers.get
-
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
     activeLoggers.set(new LogEntryBuilder)
     val started: DateTime = DateTime.now(DateTimeZone.UTC)
@@ -32,9 +30,13 @@ object ImplicitLogging {
     getCurrentImplicitLogger.result = Error(msg)
   }
 
+  def getCurrentImplicitLogger = activeLoggers.get
+
   def recordValue(name: String, value: String) = {
     getCurrentImplicitLogger.addValue(name, value)
   }
+
+  trait Result
 
   class LogEntryBuilder() {
     var values: List[Values] = List()
@@ -45,15 +47,27 @@ object ImplicitLogging {
       values
     }
 
-    def build(name: String, started: DateTime, ended: DateTime): LogEntry = {
-      LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values, result)
-    }
-
     def buildAsJson(name: String, started: DateTime, ended: DateTime): JsValue = {
       import org.ciroque.ccr.logging.ImplicitLogging.LogEntryProtocol._
       build(name, started, ended).toJson
     }
+
+    def build(name: String, started: DateTime, ended: DateTime): LogEntry = {
+      LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values, result)
+    }
   }
+
+  case class LogEntry(name: String, timing: Timing, values: List[Values], result: Result = Success())
+
+  case class Timing(start: DateTime, end: DateTime, duration: Long)
+
+  case class Values(name: String, value: String)
+
+  case class Success() extends Result
+
+  case class Error(msg: String) extends Result
+
+  case class Exception(msg: String, cause: Throwable) extends Result
 
   object ValuesProtocol extends DefaultJsonProtocol {
     implicit def valueFormat: RootJsonFormat[Values] = jsonFormat2(Values)
@@ -87,23 +101,11 @@ object ImplicitLogging {
   }
 
   object LogEntryProtocol extends DefaultJsonProtocol {
+
     import org.ciroque.ccr.logging.ImplicitLogging.TimingProtocol._
     import org.ciroque.ccr.logging.ImplicitLogging.ValuesProtocol._
 
     implicit def logEntryFormat: RootJsonFormat[LogEntry] = jsonFormat4(LogEntry)
   }
 
-  case class LogEntry(name: String, timing: Timing, values: List[Values], result: Result = Success())
-
-  case class Timing(start: DateTime, end: DateTime, duration: Long)
-
-  case class Values(name: String, value: String)
-
-  trait Result
-
-  case class Success() extends Result
-
-  case class Error(msg: String) extends Result
-
-  case class Exception(msg: String, cause: Throwable) extends Result
 }

@@ -29,11 +29,26 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
+  private def allEnvironments() = {
+    filteredMappedSorted(
+      conf => true,
+      conf => conf.key.environment
+    )
+  }
+
   override def retrieveApplications(environment: String): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore.retrieveApplications") {
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
       Future.successful(composeInterstitialResultOptionFor(applicationsIn(environment), () => s"environment '$environment' was not found"))
     }
+  }
+
+  private def applicationsIn(environment: String): List[String] = {
+    val regex = checkWildcards(environment)
+    filteredMappedSorted(
+      conf => regex.findFirstIn(conf.key.environment).isDefined,
+      conf => conf.key.application
+    )
   }
 
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
@@ -44,12 +59,51 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
+  private def scopesIn(environment: String, application: String): List[String] = {
+    val environmentRegex = checkWildcards(environment)
+    val applicationRegex = checkWildcards(application)
+    filteredMappedSorted(
+      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
+        && applicationRegex.findFirstIn(conf.key.application).isDefined,
+      conf => conf.key.scope
+    )
+  }
+
   override def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore.retrieveSettings") {
       recordValue(Commons.KeyStrings.EnvironmentKey, environment)
       recordValue(Commons.KeyStrings.ApplicationKey, application)
       recordValue(Commons.KeyStrings.ScopeKey, scope)
       Future.successful(composeInterstitialResultOptionFor(settingsIn(environment, application, scope), () => s"environment '$environment' / application '$application' / scope '$scope' combination was not found"))
+    }
+  }
+
+  private def settingsIn(environment: String, application: String, scope: String): List[String] = {
+    val environmentRegex = checkWildcards(environment)
+    val applicationRegex = checkWildcards(application)
+    val scopeRegex = checkWildcards(scope)
+    filteredMappedSorted(
+      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
+        && applicationRegex.findFirstIn(conf.key.application).isDefined
+        && scopeRegex.findFirstIn(conf.key.scope).isDefined,
+      conf => conf.key.setting)
+  }
+
+  private def filteredMappedSorted(include: (Configuration) => Boolean, mapping: (Configuration) => String): List[String] = {
+    applyFilter(include)
+      .map(mapping)
+      .distinct
+      .sortBy(s => s)
+  }
+
+  private def applyFilter(include: (Configuration) => Boolean): List[Configuration] = {
+    configurations.filter(include)
+  }
+
+  private def composeInterstitialResultOptionFor(list: List[String], buildNotFoundMessage: () => String): DataStoreResult = {
+    list match {
+      case Nil => NotFound(buildNotFoundMessage())
+      case list: List[String] => Found(list)
     }
   }
 
@@ -85,60 +139,6 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       }
 
       Future.successful(result)
-    }
-  }
-
-  private def allEnvironments() = {
-    filteredMappedSorted(
-      conf => true,
-      conf => conf.key.environment
-    )
-  }
-
-  private def applicationsIn(environment: String): List[String] = {
-    val regex = checkWildcards(environment)
-    filteredMappedSorted(
-      conf => regex.findFirstIn(conf.key.environment).isDefined,
-      conf => conf.key.application
-    )
-  }
-
-  private def scopesIn(environment: String, application: String): List[String] = {
-    val environmentRegex = checkWildcards(environment)
-    val applicationRegex = checkWildcards(application)
-    filteredMappedSorted(
-      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
-        && applicationRegex.findFirstIn(conf.key.application).isDefined,
-      conf => conf.key.scope
-    )
-  }
-
-  private def settingsIn(environment: String, application: String, scope: String): List[String] = {
-    val environmentRegex = checkWildcards(environment)
-    val applicationRegex = checkWildcards(application)
-    val scopeRegex = checkWildcards(scope)
-    filteredMappedSorted(
-      conf => environmentRegex.findFirstIn(conf.key.environment).isDefined
-        && applicationRegex.findFirstIn(conf.key.application).isDefined
-        && scopeRegex.findFirstIn(conf.key.scope).isDefined,
-      conf => conf.key.setting)
-  }
-
-  private def filteredMappedSorted(include: (Configuration) => Boolean, mapping: (Configuration) => String): List[String] = {
-    applyFilter(include)
-      .map(mapping)
-      .distinct
-      .sortBy(s => s)
-  }
-
-  private def applyFilter(include: (Configuration) => Boolean): List[Configuration] = {
-    configurations.filter(include)
-  }
-
-  private def composeInterstitialResultOptionFor(list: List[String], buildNotFoundMessage: () => String): DataStoreResult = {
-    list match {
-      case Nil => NotFound(buildNotFoundMessage())
-      case list: List[String] => Found(list)
     }
   }
 }

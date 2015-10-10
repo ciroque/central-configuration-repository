@@ -23,7 +23,9 @@ trait ConfigurationManagementService
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
 
-  override def getVersion = new SemanticVersion(1,0,0)
+  override def getVersion = new SemanticVersion(1, 0, 0)
+
+  def routes = settingUpsertRoute
 
   def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) =>
@@ -55,6 +57,4 @@ trait ConfigurationManagementService
     }
     (result, statusCode)
   }
-
-  def routes = settingUpsertRoute
 }

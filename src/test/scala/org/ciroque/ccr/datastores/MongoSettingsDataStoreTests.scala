@@ -11,7 +11,6 @@ class MongoSettingsDataStoreTests
 
   val settings: DataStoreParams = new DataStoreParams("localhost", None, "test-ccr", "configurations", "", "")
   override implicit val logger = new CachingLogger()
-
   override implicit val settingsDataStore: SettingsDataStore = new MongoSettingsDataStore(settings)(logger)
 
   override def afterAll() = {

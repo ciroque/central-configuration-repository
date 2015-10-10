@@ -34,6 +34,34 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     }
   }
 
+  private def toMongoDbObject(configuration: Configuration) = {
+    import org.ciroque.ccr.core.Commons
+    RegisterJodaTimeConversionHelpers()
+
+    val coreKeys = List((Commons.KeyStrings.EnvironmentKey, configuration.key.environment)
+      , (Commons.KeyStrings.ApplicationKey, configuration.key.application)
+      , (Commons.KeyStrings.ScopeKey, configuration.key.scope)
+      , (Commons.KeyStrings.SettingKey, configuration.key.setting))
+
+    val keyValues = configuration.key.sourceId match {
+      case None => coreKeys
+      case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
+    }
+
+    val mdbo = MongoDBObject(
+      Commons.KeyStrings.IdKey -> configuration._id,
+      Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
+      Commons.KeyStrings.ValueKey -> configuration.value,
+      Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
+        Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
+        Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
+        Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
+      )
+    )
+
+    mdbo
+  }
+
   override def retrieveScopes(environment: String, application: String): Future[DataStoreResult] = {
     withImplicitLogging("MongoSettingsDataStore.retrieveScopes") {
       import org.ciroque.ccr.core.Commons
@@ -135,34 +163,6 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     }
   }
 
-  private def toMongoDbObject(configuration: Configuration) = {
-    import org.ciroque.ccr.core.Commons
-    RegisterJodaTimeConversionHelpers()
-
-    val coreKeys = List((Commons.KeyStrings.EnvironmentKey, configuration.key.environment)
-      , (Commons.KeyStrings.ApplicationKey, configuration.key.application)
-      , (Commons.KeyStrings.ScopeKey, configuration.key.scope)
-      , (Commons.KeyStrings.SettingKey, configuration.key.setting))
-
-    val keyValues = configuration.key.sourceId match {
-      case None => coreKeys
-      case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
-    }
-
-    val mdbo = MongoDBObject(
-      Commons.KeyStrings.IdKey -> configuration._id,
-      Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
-      Commons.KeyStrings.ValueKey -> configuration.value,
-      Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
-        Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
-        Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
-        Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
-      )
-    )
-
-    mdbo
-  }
-
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
     import org.ciroque.ccr.core.Commons
     RegisterJodaTimeConversionHelpers()
@@ -170,7 +170,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     val key = db.get(Commons.KeyStrings.KeyKey).asInstanceOf[DBObject]
     val temporalization = db.get(Commons.KeyStrings.TemporalizationKey).asInstanceOf[DBObject]
 
-    val sourceId = if(key.containsField(Commons.KeyStrings.SourceIdKey))
+    val sourceId = if (key.containsField(Commons.KeyStrings.SourceIdKey))
       Some(key.get(Commons.KeyStrings.SourceIdKey).toString)
     else
       None

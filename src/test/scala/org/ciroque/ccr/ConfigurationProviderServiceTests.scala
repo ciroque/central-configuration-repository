@@ -31,10 +31,9 @@ class ConfigurationProviderServiceTests
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
   override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
   override implicit val logger = new CachingLogger()
+  val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
 
   override def actorRefFactory: ActorRefFactory = system
-
-  val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
 
   override def beforeEach() = {
     reset(dataStore)
@@ -310,12 +309,6 @@ class ConfigurationProviderServiceTests
     }
   }
 
-  private def assertCorsHeaders(headers: List[HttpHeader]) = {
-    headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
-    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT"))
-    headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
-  }
-
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
     logger.getEvents.size shouldBe count
     val logEvent = logger.getEvents.head
@@ -324,6 +317,21 @@ class ConfigurationProviderServiceTests
 
   private def futureSuccessfulDataStoreResult[T](items: List[T]) = {
     Future.successful(DataStoreResults.Found(items))
+  }
+
+  private def verifyGetForPath(path: String, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
+    val pathAsList = splitPathToArray(path)
+    expecting {
+      retriever.andReturn(Future.successful(DataStoreResults.Found(listToReturn)))
+      accessStatsClient.recordQuery(pathAsList.head, pathAsList(1), pathAsList(2), pathAsList(3)).andReturn(Future.successful(1L))
+    }
+    whenExecuting(dataStore, accessStatsClient) {
+      Get(s"$settingsPath$path") ~> routes ~> check {
+        status should equal(StatusCodes.OK)
+        assertCorsHeaders(headers)
+        listToReturn.foreach(segment => responseAs[String] should include(segment))
+      }
+    }
   }
 
   private def splitPathToArray(path: String): List[String] = {
@@ -343,21 +351,6 @@ class ConfigurationProviderServiceTests
     }
   }
 
-  private def verifyGetForPath(path: String, retriever: => Future[DataStoreResult], listToReturn: List[String]): Unit = {
-    val pathAsList = splitPathToArray(path)
-    expecting {
-      retriever.andReturn(Future.successful(DataStoreResults.Found(listToReturn)))
-      accessStatsClient.recordQuery(pathAsList.head, pathAsList(1), pathAsList(2), pathAsList(3)).andReturn(Future.successful(1L))
-    }
-    whenExecuting(dataStore, accessStatsClient) {
-      Get(s"$settingsPath$path") ~> routes ~> check {
-        status should equal(StatusCodes.OK)
-        assertCorsHeaders(headers)
-        listToReturn.foreach(segment => responseAs[String] should include(segment))
-      }
-    }
-  }
-
   private def verifyGetWithDataStoreFailure(path: String, retriever: => Future[DataStoreResult]) = {
     val errorMessage = "Mock Failure"
     val cause = new Exception("The underlying data store was not available.")
@@ -374,5 +367,11 @@ class ConfigurationProviderServiceTests
         internalServerErrorResponse.cause should equal(cause.getMessage)
       }
     }
+  }
+
+  private def assertCorsHeaders(headers: List[HttpHeader]) = {
+    headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
+    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT"))
+    headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
   }
 }
