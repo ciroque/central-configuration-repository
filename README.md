@@ -24,12 +24,12 @@ The definition of a configuration setting includes a cache lifetime component as
 should use this value to minimize calls to the service. The cache lifetime is a numeric value that indicates the number of 
 seconds the value should be cached before subsequent calls to the service are made.
 
-#### Effective Date 'effectiveAt' and 'expiresAt' fields)
+#### Effective Date ('effectiveAt' and 'expiresAt' fields)
 It is possible to define a date range during which a given configuration value is valid. Part of a configuration value definition are
 the effectiveAt and expiresAt fields. This makes it possible to schedule configuration changes for future dates and retire existing
 values. The service currently maintains the complete history of changes for each value. This realizes an audit trail of changes.
 
-### Default Values (
+### Default Values
 It is possible to define a default value using the string 'default' (without quotes) at the environment segment of the hierarchy. The service
 will automatically return the default value, if defined, when a query contains a request that cannot be satisfied due to expiration
 values, or the non-existence of a value for the specified environment. For example, if a request comes in as follows:
@@ -110,6 +110,9 @@ As noted above it is possible to perform discovery by starting at the root hiera
     The `/ccr/settings/production/webservice/logging/logFilename` URI will return a list of active configurations of the logFilename configuration in the logging scope of the webservice application in the production environment.
 
 Wildcards -- in the form of a splat (*) -- are allowed at all levels of the query. Including a splat in a segment will match all characters preceding the splat and any characters to the end of the segment.
+
+
+
 
 <pre>
        _
