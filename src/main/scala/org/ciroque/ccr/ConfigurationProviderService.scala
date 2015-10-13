@@ -264,9 +264,15 @@ trait ConfigurationProviderService
           get { ctxt =>
 
             def buildHeaders(configurations: List[ConfigurationFactory.Configuration]) = {
+              import spray.http.CacheDirectives.`max-age`
+              import spray.http.HttpHeaders.`Cache-Control`
+
               configurations match {
                 case Nil => Commons.corsHeaders
-                case _ => Commons.corsHeaders :+ RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusMillis(configurations.head.temporality.ttl.toInt).toString())
+                case _ =>
+                  val maxAgeHeader = `Cache-Control`(`max-age`(configurations.head.temporality.ttl))
+                  val expiresHeader = RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusSeconds(configurations.head.temporality.ttl.toInt).toString())
+                  Commons.corsHeaders :+ expiresHeader :+ RawHeader(maxAgeHeader.name, maxAgeHeader.value)
               }
             }
 

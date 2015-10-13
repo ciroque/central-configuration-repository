@@ -10,18 +10,26 @@ for default values at the environment segment of the hierarchy.
 Each configuration setting is keyed based on environment, application, scope, and name. These values create a hierarchy
 that uniquely identifies a specific configuration value.
 
-### Cache Expiration
-The definition of a configuration setting includes a cache lifetime component as well. Clients of the service
-should use this value to minimize calls to the service. The cache lifetime is a numeric value and is generally intended
-to indicate the number of seconds the value should be cached before subsequent calls to the service are made. However,
-these semantics are not enforced within the service, and the value can be interpreted in any manner desirable.
+There is an additional, optional, key field 'sourceId' that can be used to further refine a configuration. To query on this 
+field include the value as a query string parameter with the name **sourceId**, i.e.:
 
-### Effective Dates
+`/ccr/settings/:environment/:application/:scope/:setting?sourceId=[someValue]`
+
+Note that the sourceId field is limited to 64 characters. Any input longer than 64 characters is truncated.
+
+### Temporality
+
+#### Cache Expiration ('ttl' field)
+The definition of a configuration setting includes a cache lifetime component as well. Clients of the service
+should use this value to minimize calls to the service. The cache lifetime is a numeric value that indicates the number of 
+seconds the value should be cached before subsequent calls to the service are made.
+
+#### Effective Date 'effectiveAt' and 'expiresAt' fields)
 It is possible to define a date range during which a given configuration value is valid. Part of a configuration value definition are
-the eff_date and end_date fields. This makes it possible to schedule configuration changes for future dates and retire existing
+the effectiveAt and expiresAt fields. This makes it possible to schedule configuration changes for future dates and retire existing
 values. The service currently maintains the complete history of changes for each value. This realizes an audit trail of changes.
 
-### Default Values
+### Default Values (
 It is possible to define a default value using the string 'default' (without quotes) at the environment segment of the hierarchy. The service
 will automatically return the default value, if defined, when a query contains a request that cannot be satisfied due to expiration
 values, or the non-existence of a value for the specified environment. For example, if a request comes in as follows:
@@ -34,6 +42,8 @@ not change across environments without having to define the configuration value 
 
 ### Composition
 The service is comprised of several different endpoints that each offer a slice of related functionality.
+
+;;;FORTHCOMING;;;
 
 - Provider Endpoints
  - Configuration Provider Service
@@ -93,32 +103,13 @@ As with the other segments there are no restrictions on how scopes can be define
 
 As noted above it is possible to perform discovery by starting at the root hierarchy segment and build the URI to the desired setting.
 
-    The /ccr/setting URI will return a list of the environments available.
-    The /ccr/setting/production URI will return a list of the applications available in the production environment.
-    The /ccr/setting/production/webservice URI will return a list of the scopes available in the webservice application in the production environment.
-    The /ccr/setting/production/webservice/logging URI will return a list of the logging settings for the webservice appliction in the production environment.
+    The `/ccr/settings` URI will return a list of the environments available.
+    The `/ccr/settings/production` URI will return a list of the applications available in the production environment.
+    The `/ccr/settings/production/webservice` URI will return a list of the scopes available in the webservice application in the production environment.
+    The `/ccr/settings/production/webservice/logging` URI will return a list of the logging settings for the webservice application in the production environment.
+    The `/ccr/settings/production/webservice/logging/logFilename` URI will return a list of active configurations of the logFilename configuration in the logging scope of the webservice application in the production environment.
 
-### Batch Configuration Provider Service
-
-#### Overview
-
-This is the endpoint that should be used to request the full set of configuration settings for an application and,
-optionally, scope (all scopes are included if only the application is provided).
-
-#### Resource Identification URIs
-
-#### Examples
-
-### Configuration Management Service
-
-#### Overview
-This is the endpoint that should be used to manage the configuration settings.
-
-#### Resource Identification URIs
-
-#### Examples
-
-
+Wildcards -- in the form of a splat (*) -- are allowed at all levels of the query. Including a splat in a segment will match all characters preceding the splat and any characters to the end of the segment.
 
 <pre>
        _

@@ -213,7 +213,7 @@ class ConfigurationProviderServiceTests
       import java.util.UUID
       val effectiveAt = DateTime.now().minusDays(30)
       val expiresAt = DateTime.now().plusDays(30)
-      val ttl = 1000 * 60 * 60 * 24 // 24 little hours
+      val ttl = 60 * 60 * 24 // 24 little hours
       val settingUri = s"$settingsPath/$environment/$application/$scope/$setting"
       val configuration = ConfigurationFactory(
         UUID.randomUUID,
@@ -295,14 +295,16 @@ class ConfigurationProviderServiceTests
             conf.configuration.head.toJson.toString should equal(configuration.toJson.toString())
             conf.configuration.head._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
-            val cacheUntil = DateTime.now(DateTimeZone.UTC).plusMillis(conf.configuration.head.temporality.ttl.toInt)
-
+            val cacheUntil = DateTime.now(DateTimeZone.UTC).plusSeconds(conf.configuration.head.temporality.ttl.toInt)
             val expiresHeader = headers.filter(header => header.name == "Expires")
             expiresHeader.size shouldEqual 1
 
             val expiry = DateTime.parse(expiresHeader.head.value)
-
             cacheUntil.getMillis shouldBe (expiry.getMillis +- 50)
+
+            val maxAgeHeader = headers.filter(header => header.name.contains("Cache-Control"))
+            maxAgeHeader.size shouldEqual 1
+            maxAgeHeader.head.value should include(configuration.temporality.ttl.toString)
           }
         }
       }
