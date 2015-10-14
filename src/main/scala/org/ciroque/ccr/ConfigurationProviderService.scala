@@ -270,8 +270,11 @@ trait ConfigurationProviderService
               configurations match {
                 case Nil => Commons.corsHeaders
                 case _ =>
+
                   val maxAgeHeader = `Cache-Control`(`max-age`(configurations.head.temporality.ttl))
-                  val expiresHeader = RawHeader("Expires", DateTime.now(DateTimeZone.UTC).plusSeconds(configurations.head.temporality.ttl.toInt).toString())
+                  val expiry = DateTime.now(DateTimeZone.UTC).plusSeconds(configurations.head.temporality.ttl.toInt)
+                  val expiry1123 = Commons.DateTimeFormatter1123.print(expiry)
+                  val expiresHeader = RawHeader("Expires", expiry1123)
                   Commons.corsHeaders :+ expiresHeader :+ RawHeader(maxAgeHeader.name, maxAgeHeader.value)
               }
             }

@@ -299,8 +299,8 @@ class ConfigurationProviderServiceTests
             val expiresHeader = headers.filter(header => header.name == "Expires")
             expiresHeader.size shouldEqual 1
 
-            val expiry = DateTime.parse(expiresHeader.head.value)
-            cacheUntil.getMillis shouldBe (expiry.getMillis +- 50)
+            val expiry = DateTime.parse(expiresHeader.head.value, Commons.DateTimeFormatter1123)
+            cacheUntil.getMillis shouldBe (expiry.getMillis +- 1000)
 
             val maxAgeHeader = headers.filter(header => header.name.contains("Cache-Control"))
             maxAgeHeader.size shouldEqual 1
