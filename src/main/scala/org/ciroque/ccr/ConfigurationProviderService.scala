@@ -115,7 +115,7 @@ trait ConfigurationProviderService
             completeRoute[String](
               ctx,
               dataStore.retrieveApplications(environment),
-              list => (ApplicationGetResponse(list).toJson, StatusCodes.OK)
+              list => (ApplicationGetResponse(environment, list).toJson, StatusCodes.OK)
             )
           }
         }
@@ -147,7 +147,7 @@ trait ConfigurationProviderService
             completeRoute[String](
               ctx,
               dataStore.retrieveScopes(environment, application),
-              list => (ScopeGetResponse(list).toJson, StatusCodes.OK)
+              list => (ScopeGetResponse(environment, application, list).toJson, StatusCodes.OK)
             )
           }
         }
@@ -184,7 +184,7 @@ trait ConfigurationProviderService
             completeRoute[String](
               ctx,
               dataStore.retrieveSettings(environment, application, scope),
-              list => (SettingGetResponse(list).toJson, StatusCodes.OK)
+              list => (SettingGetResponse(environment, application, scope, list).toJson, StatusCodes.OK)
             )
           }
         }
