@@ -25,6 +25,7 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
     override implicit def actorRefFactory: ActorRefFactory = context
 
     override implicit val dataStore: SettingsDataStore = ds
+    override implicit val logger = LoggerFactory.getLogger(classOf[ConfigurationProviderService])
   }
   val swaggerService = new SwaggerHttpService {
     def actorRefFactory = context

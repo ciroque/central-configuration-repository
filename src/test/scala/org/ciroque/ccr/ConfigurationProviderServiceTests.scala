@@ -373,7 +373,7 @@ class ConfigurationProviderServiceTests
 
   private def assertCorsHeaders(headers: List[HttpHeader]) = {
     headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
-    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT"))
+    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT,POST"))
     headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
   }
 }

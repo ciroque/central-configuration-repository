@@ -3,6 +3,7 @@ package org.ciroque.ccr
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.ConfigurationResponse
 import org.easymock.EasyMock._
@@ -83,6 +84,7 @@ class ConfigurationManagementServiceTests
   }
 
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
+  override implicit val logger = new CachingLogger()
 
   override def beforeEach() =
     reset(dataStore)

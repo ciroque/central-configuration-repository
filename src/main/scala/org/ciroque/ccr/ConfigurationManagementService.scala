@@ -6,9 +6,11 @@ import akka.util.Timeout
 import org.ciroque.ccr.core.{CcrService, Commons}
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.SettingsDataStore
+import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.ciroque.ccr.responses.ConfigurationResponse
+import org.slf4j.Logger
 import spray.http.MediaTypes._
 import spray.http.{HttpEntity, HttpResponse, StatusCode, StatusCodes}
 import spray.json._
@@ -22,17 +24,19 @@ trait ConfigurationManagementService
 
   implicit val timeout: Timeout = Timeout(3, TimeUnit.SECONDS)
   implicit val dataStore: SettingsDataStore
+  implicit val logger: Logger
 
   override def getVersion = new SemanticVersion(1, 0, 0)
 
   def routes = settingUpsertRoute
 
   def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment) {
-      pathEndOrSingleSlash {
-        requestUri { uri =>
-          import spray.httpx.SprayJsonSupport._
-          entity(as[ConfigurationFactory.Configuration]) { configuration =>
-            post { context =>
+    pathEndOrSingleSlash {
+      requestUri { uri =>
+        import spray.httpx.SprayJsonSupport._
+        entity(as[ConfigurationFactory.Configuration]) { configuration =>
+          post { context =>
+            withImplicitLogging("ConfigurationManagementService::settingUpsertRoute::POST") {
               for {
                 eventualResult <- dataStore.upsertConfiguration(configuration)
               } yield {
@@ -44,8 +48,14 @@ trait ConfigurationManagementService
               }
             }
           }
+        } ~
+        options { context ⇒
+          withImplicitLogging("ConfigurationManagementService::settingUpsertRoute::OPTIONS") {
+            context.complete(HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, "[]"), Commons.corsHeaders))
+          }
         }
       }
+    }
   }
 
   def processDataStoreResult(eventualResult: DataStoreResult): (JsValue, StatusCode) = {
