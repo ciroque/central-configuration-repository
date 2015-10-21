@@ -55,7 +55,7 @@ class ConfigurationManagementServiceTests
             .andReturn(Future.successful(DataStoreResults.Added(testConfiguration)))
         }
         whenExecuting(dataStore) {
-          Post(s"$settingsPath/$testEnvironment/$testApplication/$testScope/$testSetting", testConfiguration) ~> routes ~> check {
+          Post(s"$settingsPath", testConfiguration) ~> routes ~> check {
             status should equal(StatusCodes.OK)
             import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             val returnedConfiguration = responseAs[ConfigurationResponse]
@@ -74,7 +74,7 @@ class ConfigurationManagementServiceTests
             .andReturn(Future.successful(DataStoreResults.Failure(expectedErrorMessage, expectedThrowable)))
         }
         whenExecuting(dataStore) {
-          Post(s"$settingsPath/$testEnvironment/$testApplication/$testScope/$testSetting", testConfiguration) ~> routes ~> check {
+          Post(s"$settingsPath/", testConfiguration) ~> routes ~> check {
             status should equal(StatusCodes.InternalServerError)
           }
         }

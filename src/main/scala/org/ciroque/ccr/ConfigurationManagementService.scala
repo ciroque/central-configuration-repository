@@ -27,8 +27,7 @@ trait ConfigurationManagementService
 
   def routes = settingUpsertRoute
 
-  def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment / Segment / Segment / Segment / Segment) {
-    (environment, application, scope, setting) =>
+  def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment) {
       pathEndOrSingleSlash {
         requestUri { uri =>
           import spray.httpx.SprayJsonSupport._
