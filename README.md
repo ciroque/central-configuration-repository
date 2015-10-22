@@ -48,8 +48,8 @@ The service is comprised of several different endpoints that each offer a slice 
 - Provider Endpoints
  - Configuration Provider Service
  - Batch Configuration Provider Service
-- Management Endpoints
- - Configuration Management Service
+- Scheduling Endpoints
+ - Configuration Scheduling Service
 
 ##APIs
 

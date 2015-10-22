@@ -18,7 +18,7 @@ import spray.routing.HttpService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait ConfigurationManagementService
+trait ConfigurationSchedulingService
   extends HttpService
   with CcrService {
 
@@ -30,13 +30,13 @@ trait ConfigurationManagementService
 
   def routes = settingUpsertRoute
 
-  def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.managementSegment) {
+  def settingUpsertRoute = pathPrefix(Commons.rootPath / Commons.schedulingSegment) {
     pathEndOrSingleSlash {
       requestUri { uri =>
         import spray.httpx.SprayJsonSupport._
         entity(as[ConfigurationFactory.Configuration]) { configuration =>
           post { context =>
-            withImplicitLogging("ConfigurationManagementService::settingUpsertRoute::POST") {
+            withImplicitLogging("ConfigurationSchedulingService::settingUpsertRoute::POST") {
               for {
                 eventualResult <- dataStore.upsertConfiguration(configuration)
               } yield {
@@ -50,7 +50,7 @@ trait ConfigurationManagementService
           }
         } ~
         options { context ⇒
-          withImplicitLogging("ConfigurationManagementService::settingUpsertRoute::OPTIONS") {
+          withImplicitLogging("ConfigurationSchedulingService::settingUpsertRoute::OPTIONS") {
             context.complete(HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, "[]"), Commons.corsHeaders))
           }
         }

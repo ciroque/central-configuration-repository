@@ -16,16 +16,16 @@ import spray.testkit.ScalatestRouteTest
 
 import scala.concurrent.Future
 
-class ConfigurationManagementServiceTests
+class ConfigurationSchedulingServiceTests
   extends FunSpec
-  with ConfigurationManagementService
+  with ConfigurationSchedulingService
   with ScalatestRouteTest
   with Matchers
   with BeforeAndAfterEach
   with EasyMockSugar {
-  describe("ConfigurationManagementService") {
+  describe("ConfigurationSchedulingService") {
 
-    val settingsPath = s"/${Commons.rootPath}/${Commons.managementSegment}"
+    val settingsPath = s"/${Commons.rootPath}/${Commons.schedulingSegment}"
 
     val testEnvironment = "test-environment"
     val testApplication = "test-application"

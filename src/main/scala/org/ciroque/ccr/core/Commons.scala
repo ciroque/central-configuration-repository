@@ -15,7 +15,7 @@ object Commons {
 
   val rootPath = "ccr"
   val settingsSegment = "settings"
-  val managementSegment = "schedule"
+  val schedulingSegment = "schedule"
   val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
   val corsHeaders = List(
     RawHeader("Access-Control-Allow-Origin", "*"),

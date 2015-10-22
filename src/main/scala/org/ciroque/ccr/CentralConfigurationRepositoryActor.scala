@@ -21,7 +21,7 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
     override implicit val accessStatsClient = asc
     override implicit val logger = LoggerFactory.getLogger(classOf[ConfigurationProviderService])
   }
-  val configurationManagementService = new ConfigurationManagementService {
+  val configurationSchedulingService = new ConfigurationSchedulingService {
     override implicit def actorRefFactory: ActorRefFactory = context
 
     override implicit val dataStore: SettingsDataStore = ds
@@ -30,7 +30,7 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
   val swaggerService = new SwaggerHttpService {
     def actorRefFactory = context
 
-    def apiTypes = Seq(typeOf[ConfigurationProviderService], typeOf[ConfigurationManagementService])
+    def apiTypes = Seq(typeOf[ConfigurationProviderService], typeOf[ConfigurationSchedulingService])
 
     override def apiInfo = Some(new ApiInfo(
       Commons.ApiDocumentationStrings.ApiTitle,
@@ -51,5 +51,5 @@ class CentralConfigurationRepositoryActor(ds: SettingsDataStore, asc: AccessStat
     routes
   }
 
-  def routes = configurationManagementService.routes ~ configurationProviderService.routes ~ swaggerService.routes
+  def routes = configurationSchedulingService.routes ~ configurationProviderService.routes ~ swaggerService.routes
 }
