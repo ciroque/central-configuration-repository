@@ -26,5 +26,5 @@ object Boot extends App {
       new CentralConfigurationRepositoryActor(dataStore, accessStatsClient)),
     "central-configuration-repository-service")
 
-  IO(Http) ? Http.Bind(service, interface = "localhost", port = 35487)
+  IO(Http) ? Http.Bind(service, interface = "localhost", port = 8378)
 }
