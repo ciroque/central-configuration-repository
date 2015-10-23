@@ -18,16 +18,17 @@ if [ -z "${JAVA_HOME}" ]; then
 fi
 JAVA_OPTS="-Xms512m -Xmx1024m"
 
+APP_SHORT=ccr
 APP=central-configuration-repository
 
 PID=/var/run/${APP}.pid
-OUT_LOG=/var/log/${APP}/${APP}_out.log
-ERR_LOG=/var/log/${APP}/${APP}_err.log
+OUT_LOG=/var/log/${APP_SHORT}/${APP}_out.log
+ERR_LOG=/var/log/${APP_SHORT}/${APP}_err.log
 
 DAEMON_USER=ccrsvc
 JSVC=/usr/bin/jsvc
-APP_LOG_CONFIG=/etc/ciroque/${APP}_logback.xml
-APP_CONFIG=/etc/ciroque/${APP}.conf
+APP_LOG_CONFIG=/etc/${APP_SHORT}/${APP}_logback.xml
+APP_CONFIG=/etc/${APP_SHORT}/${APP}.conf
 APP_HOME=/opt/${APP}
 APP_CLASSPATH=$APP_HOME/${APP}.jar
 APP_CLASS=org.ciroque.ccr.Boot

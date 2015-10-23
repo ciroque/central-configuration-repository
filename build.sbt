@@ -1,4 +1,5 @@
 
+val appUser = "ccrsvc"
 
 organization := "org.ciroque"
 
@@ -9,7 +10,7 @@ scalaVersion := "2.11.6"
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 libraryDependencies ++= {
-  val akkaVersion = "2.3.9"
+  val akkaVersion = "2.4.0"
   val sprayVersion = "1.3.3"
   Seq(
     "io.spray" %% "spray-can" % sprayVersion,
@@ -30,6 +31,7 @@ libraryDependencies ++= {
 
 Revolver.settings
 
+enablePlugins(DebianPlugin)
 enablePlugins(SbtNativePackager)
 enablePlugins(JavaServerAppPackaging)
 
@@ -40,3 +42,30 @@ packageDescription := "Central Configuration Repository"
 maintainer := "Steve Wagner <scalawagz@outlook.com>"
 
 name := "central-configuration-repository"
+
+//debianPackageDependencies in Debian ++= Seq("java-runtime-headless (>= 1.7)")
+
+mappings in Universal <++= sourceDirectory  map { src =>
+  val resources = src / "main" / "resources"
+  val logback = resources / "logback.xml"
+  val application = resources / "application.conf"
+  Seq(logback -> "conf/logback.xml", application -> "conf/application.conf")
+}
+
+linuxPackageMappings in Debian <+= (version) map { (version) =>
+  val tmp = IO.createTemporaryDirectory
+  val tmpLog = tmp / "ccr" / "central-configuration-repository.log"
+  IO.write(tmpLog, "")
+  packageMapping(tmpLog -> "/var/log/ccr/central-configuration-repository.log") withUser appUser withGroup appUser
+}
+
+linuxPackageMappings <<= linuxPackageMappings map { mappings =>
+  mappings map { linuxPackage =>
+    linuxPackage.copy(
+      fileData = linuxPackage.fileData.copy(
+        user = appUser,
+        group = appUser
+      )
+    )
+  }
+}

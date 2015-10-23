@@ -9,7 +9,7 @@
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>log/ccr.log</file>
+        <file>/var/log/ccr/central-configuration-repository.log</file>
         <append>false</append>
         <encoder>
             <pattern>%date{yyyy-MM-dd} %X{akkaTimestamp} %-5level[%thread] %logger{1} - %msg%n</pattern>
