@@ -8,4 +8,3 @@ test-output/
 *.iml
 .classpath_nb
 log/
-g

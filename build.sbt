@@ -66,6 +66,6 @@ linuxPackageMappings <<= linuxPackageMappings map { mappings =>
         user = appUser,
         group = appUser
       )
-    )
+    ) withUser appUser withGroup appUser
   }
 }

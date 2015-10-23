@@ -10,5 +10,6 @@ sudo apt-get update
 
 sudo apt-get upgrade -y
 
-sudo apt-get install -y jsvc mongodb-org redis-server
+sudo apt-get install -y jsvc mongodb-org redis-server oracle-java8-installer
+
 
