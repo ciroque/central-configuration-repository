@@ -30,6 +30,7 @@ libraryDependencies ++= {
 
 Revolver.settings
 
+enablePlugins(SbtNativePackager)
 enablePlugins(JavaServerAppPackaging)
 
 packageSummary := "Central Configuration Repository"
