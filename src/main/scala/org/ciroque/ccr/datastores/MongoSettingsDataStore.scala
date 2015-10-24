@@ -12,7 +12,10 @@ import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import org.slf4j.Logger
+import spray.json.{JsObject, JsString}
 
+import scala.collection.immutable.Stream.Empty
+import scala.collection.mutable
 import scala.concurrent.Future
 
 object MongoSettingsDataStore {
@@ -48,10 +51,15 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
     }
 
+    val value = configuration.value match {
+      case Left(string) ⇒ string
+      case Right(map) ⇒ map
+    }
+
     val mdbo = MongoDBObject(
       Commons.KeyStrings.IdKey -> configuration._id,
       Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
-      Commons.KeyStrings.ValueKey -> configuration.value,
+      Commons.KeyStrings.ValueKey -> value,
       Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
         Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
         Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
@@ -142,7 +150,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         val settingQuery = checkWildcards(setting)
         val configurationQuery = $or(("key.environment" $eq environmentQuery) :: ("key.environment" $eq ConfigurationFactory.DefaultEnvironment)) ++
           $and("key.application" $eq applicationQuery, "key.scope" $eq scopeQuery, "key.setting" $eq settingQuery)
-        collection.find(configurationQuery).toList match {
+        val dbResult = collection.find(configurationQuery).toList
+        dbResult match {
           case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
           case list => list.map(fromMongoDbObject).filter(_.isActive) match {
             case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
@@ -175,6 +184,15 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     else
       None
 
+    val dbValue = db.get(Commons.KeyStrings.ValueKey)
+    val value = dbValue match {
+      case JsString(v) ⇒ Left(v)
+      case JsObject(o) ⇒ Right(o map(o1 ⇒ o1._1 → o1._2.toString))
+      case s: String ⇒ Left(s)
+      case m: Map[String, String] ⇒ Right(m)
+      case hm: mutable.LinkedHashMap ⇒ Right(hm.toMap)
+    }
+
     ConfigurationFactory(
       UUID.fromString(db.get(Commons.KeyStrings.IdKey).toString),
       key.get(Commons.KeyStrings.EnvironmentKey).toString,
@@ -182,7 +200,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       key.get(Commons.KeyStrings.ScopeKey).toString,
       key.get(Commons.KeyStrings.SettingKey).toString,
       sourceId,
-      db.get(Commons.KeyStrings.ValueKey).toString,
+      value,
       temporalization.get(Commons.KeyStrings.EffectiveAtKey).asInstanceOf[DateTime],
       temporalization.get(Commons.KeyStrings.ExpiresAtKey).asInstanceOf[DateTime],
       temporalization.get(Commons.KeyStrings.TtlKey).asInstanceOf[Long]

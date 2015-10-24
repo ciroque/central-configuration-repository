@@ -31,7 +31,7 @@ class ConfigurationSchedulingServiceTests
     val testApplication = "test-application"
     val testScope = "test-scope"
     val testSetting = "test-setting"
-    val testValue = "test-value"
+    val testValue = Left("test-value")
     val testEffectiveAt = DateTime.now().minusDays(30)
     val testExpiresAt = DateTime.now().plusDays(30)
     val testTimeToLive = 360000L

@@ -222,7 +222,7 @@ class ConfigurationProviderServiceTests
         scope,
         setting,
         Some(sourceId),
-        "DEBUG",
+        Left("DEBUG"),
         effectiveAt,
         expiresAt,
         ttl)
