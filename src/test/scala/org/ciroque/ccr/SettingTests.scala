@@ -16,7 +16,7 @@ class SettingTests extends FunSpec with Matchers {
     val app = "A"
     val scp = "S"
     val set = "T"
-    val value = Left("V")
+    val value = JsString("V")
     val ttl = 5000
 
     it("should be constructable via a flattened parameter factory") {
@@ -45,7 +45,7 @@ class SettingTests extends FunSpec with Matchers {
       fields.keys should contain(Commons.KeyStrings.ValueKey)
       fields.keys should contain(Commons.KeyStrings.TemporalityKey)
 
-      assertValue(fields, Commons.KeyStrings.ValueKey, JsString(value.a))
+      assertValue(fields, Commons.KeyStrings.ValueKey, value)
 
       configuration._id.toString should fullyMatch regex "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 

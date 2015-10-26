@@ -12,13 +12,13 @@ object ConfigurationFactory extends DefaultJsonProtocol {
   implicit val KeyResponseFormat = jsonFormat5(Key.apply)
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
-  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), Left(""), Temporality(DateTime.now(), DateTime.now(), 0L))
+  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
 
   def apply(environment: String,
             application: String,
             scope: String,
             setting: String,
-            value: Either[String, Map[String, String]],
+            value: JsValue,
             effectiveAt: DateTime,
             expiresAt: DateTime,
             ttl: Long): Configuration = {
@@ -30,7 +30,7 @@ object ConfigurationFactory extends DefaultJsonProtocol {
             application: String,
             scope: String,
             setting: String,
-            value: Either[String, Map[String, String]],
+            value: JsValue,
             effectiveAt: DateTime,
             expiresAt: DateTime,
             ttl: Long): Configuration = {
@@ -43,7 +43,7 @@ object ConfigurationFactory extends DefaultJsonProtocol {
             scope: String,
             setting: String,
             sourceId: Option[String],
-            value: Either[String, Map[String, String]],
+            value: JsValue,
             effectiveAt: DateTime,
             expiresAt: DateTime,
             ttl: Long): Configuration = {
@@ -59,7 +59,7 @@ object ConfigurationFactory extends DefaultJsonProtocol {
 
   case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
 
-  case class Configuration(_id: UUID, key: Key, value: Either[String, Map[String, String]], temporality: Temporality) {
+  case class Configuration(_id: UUID, key: Key, value: JsValue, temporality: Temporality) {
     def isActive = {
 
       def temporallyActive() = {

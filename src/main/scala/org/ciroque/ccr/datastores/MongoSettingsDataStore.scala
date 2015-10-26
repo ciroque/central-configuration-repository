@@ -3,6 +3,7 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import com.mongodb.DBObject
+import com.mongodb.casbah.Implicits._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.{MongoClient, MongoCollection}
@@ -12,10 +13,8 @@ import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import org.slf4j.Logger
-import spray.json.{JsObject, JsString}
+import spray.json._
 
-import scala.collection.immutable.Stream.Empty
-import scala.collection.mutable
 import scala.concurrent.Future
 
 object MongoSettingsDataStore {
@@ -23,6 +22,12 @@ object MongoSettingsDataStore {
 }
 
 class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Logger) extends SettingsDataStore {
+
+  import com.mongodb.BasicDBList
+  import com.mongodb.casbah.commons.MongoDBList
+  import org.bson.types.ObjectId
+  import spray.json.JsValue
+
   val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
 
   override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
@@ -51,15 +56,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
     }
 
-    val value = configuration.value match {
-      case Left(string) ⇒ string
-      case Right(map) ⇒ map
-    }
-
     val mdbo = MongoDBObject(
       Commons.KeyStrings.IdKey -> configuration._id,
       Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
-      Commons.KeyStrings.ValueKey -> value,
+      Commons.KeyStrings.ValueKey -> configuration.value,
       Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
         Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
         Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
@@ -173,8 +173,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
+    import com.mongodb.BasicDBList
     import org.ciroque.ccr.core.Commons
-    RegisterJodaTimeConversionHelpers()
+    RegisterJodaTimeConversionHelpers() // TODO: Can this be done at a broader scope and less frequently?
+//    val mdb = dbo.asInstanceOf[MongoDBObject]MongoDBObject
     val db = dbo.toMap
     val key = db.get(Commons.KeyStrings.KeyKey).asInstanceOf[DBObject]
     val temporalization = db.get(Commons.KeyStrings.TemporalizationKey).asInstanceOf[DBObject]
@@ -184,14 +186,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     else
       None
 
-    val dbValue = db.get(Commons.KeyStrings.ValueKey)
-    val value = dbValue match {
-      case JsString(v) ⇒ Left(v)
-      case JsObject(o) ⇒ Right(o map(o1 ⇒ o1._1 → o1._2.toString))
-      case s: String ⇒ Left(s)
-      case m: Map[String, String] ⇒ Right(m)
-      case hm: mutable.LinkedHashMap ⇒ Right(hm.toMap)
-    }
+    val mongoValue = db.get(Commons.KeyStrings.ValueKey).asInstanceOf[BasicDBList].toArray.apply(0)
+
+    val value = fromMongo(mongoValue)
 
     ConfigurationFactory(
       UUID.fromString(db.get(Commons.KeyStrings.IdKey).toString),
@@ -205,5 +202,31 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       temporalization.get(Commons.KeyStrings.ExpiresAtKey).asInstanceOf[DateTime],
       temporalization.get(Commons.KeyStrings.TtlKey).asInstanceOf[Long]
     )
+  }
+
+  def fromMongoDBObject(obj: MongoDBObject): JsObject = {
+    JsObject(obj.toSeq.map { case (key, value) =>
+      key -> fromMongo(value)
+    }.toMap)
+  }
+
+  def fromMongoDBList(list: MongoDBList): JsArray = {
+    JsArray(list.map(fromMongo).toVector)
+  }
+
+  private def fromMongo(a: Any): JsValue = a match {
+    case id: ObjectId => JsString(id.toString)
+    case list: BasicDBList => fromMongoDBList(list)
+    case obj: DBObject => fromMongoDBObject(obj)
+    case long: Long => JsNumber(long)
+    case int: Int => JsNumber(int)
+    case float: Float => JsNumber(float)
+    case double: Double => JsNumber(double)
+    case decimal: java.math.BigDecimal => JsNumber(decimal)
+    case decimal: scala.BigDecimal => JsNumber(decimal)
+    case string: String => JsString(string)
+    case boolean: Boolean => JsBoolean(boolean)
+    case null => import spray.json.JsNull
+      JsNull
   }
 }

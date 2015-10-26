@@ -24,6 +24,7 @@ class ConfigurationSchedulingServiceTests
   with BeforeAndAfterEach
   with EasyMockSugar {
   describe("ConfigurationSchedulingService") {
+    import spray.json.JsString
 
     val settingsPath = s"/${Commons.rootPath}/${Commons.schedulingSegment}"
 
@@ -31,7 +32,7 @@ class ConfigurationSchedulingServiceTests
     val testApplication = "test-application"
     val testScope = "test-scope"
     val testSetting = "test-setting"
-    val testValue = Left("test-value")
+    val testValue = JsString("test-value")
     val testEffectiveAt = DateTime.now().minusDays(30)
     val testExpiresAt = DateTime.now().plusDays(30)
     val testTimeToLive = 360000L

@@ -222,7 +222,7 @@ class ConfigurationProviderServiceTests
         scope,
         setting,
         Some(sourceId),
-        Left("DEBUG"),
+        JsString("DEBUG"),
         effectiveAt,
         expiresAt,
         ttl)
