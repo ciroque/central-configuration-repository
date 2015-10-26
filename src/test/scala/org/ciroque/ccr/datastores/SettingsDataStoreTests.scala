@@ -28,7 +28,7 @@ abstract class SettingsDataStoreTests
   val testApplication = "test-application"
   val testScope = "test-scope"
   val testSetting = "test-settings"
-  val testValue = JsString("test-value")
+  val testValue = JsObject("test-key" → JsString("test-value"), "nested" → JsObject("nested-key" → JsString("nested-value")))
   val testEffectiveAt = DateTime.now().minusMonths(1)
   val testExpiresAt = DateTime.now().plusMonths(1)
   val ttl = 360000
