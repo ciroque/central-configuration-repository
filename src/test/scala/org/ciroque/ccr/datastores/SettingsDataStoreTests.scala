@@ -10,6 +10,7 @@ import org.scalatest._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.Span
+import spray.json._
 
 abstract class SettingsDataStoreTests
   extends FunSpec
@@ -28,7 +29,14 @@ abstract class SettingsDataStoreTests
   val testApplication = "test-application"
   val testScope = "test-scope"
   val testSetting = "test-settings"
-  val testValue = JsObject("test-key" → JsString("test-value"), "nested" → JsObject("nested-key" → JsString("nested-value")))
+  val testValue = JsObject(
+    "test-key" → JsString("test-value"),
+    "nested" → JsObject("nested-key" → JsString("nested-value"))
+    , "a_number" → JsNumber(1440)
+    , "a_boolean" → JsBoolean(true)
+    , "a_null" → JsNull
+    , "an_array" → JsArray(Vector(JsString("One"), JsNumber(3.3), JsNumber(2), JsObject("four" → JsNumber(4))))
+  )
   val testEffectiveAt = DateTime.now().minusMonths(1)
   val testExpiresAt = DateTime.now().plusMonths(1)
   val ttl = 360000

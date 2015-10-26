@@ -161,7 +161,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     def buildMongoDbObjectGraph(js: JsValue): Any = {
       js match {
         case JsString(s) ⇒ s
-        case JsNumber(n) ⇒ n
+        case JsNumber(n) ⇒ n.doubleValue()
         case JsBoolean(b) ⇒ b
         case JsObject(m) ⇒ m.map { case (k, v) ⇒ (k, buildMongoDbObjectGraph(v)) }
         case JsArray(e) ⇒ e.map(j ⇒ buildMongoDbObjectGraph(j))
