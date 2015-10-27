@@ -69,7 +69,11 @@ trait ConfigurationProviderService
       respondWithHeaders(Commons.corsHeaders) {
         respondWithStatus(Commons.teaPotStatusCode) {
           complete {
-            HyperMediaMessageResponse(Commons.ApiDocumentationStrings.SeeDocumentation, Map("documentation" -> "/documentation"))
+            HyperMediaMessageResponse(
+              Commons.ApiDocumentationStrings.SeeDocumentation,
+              Map(
+                "documentation" -> "/documentation",
+                "service" -> s"${Commons.rootPath}/${Commons.settingsSegment}"))
           }
         }
       }

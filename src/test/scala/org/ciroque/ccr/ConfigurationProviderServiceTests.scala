@@ -69,9 +69,11 @@ class ConfigurationProviderServiceTests
           import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
           val hyperMediaResponse = responseAs[HyperMediaMessageResponse]
           hyperMediaResponse.message should include("Please review the documentation")
-          hyperMediaResponse._links.size should equal(1)
+          hyperMediaResponse._links.size should equal(2)
           hyperMediaResponse._links.head._1 should equal("documentation")
           hyperMediaResponse._links.head._2 should equal("/documentation")
+          hyperMediaResponse._links.last._1 should equal("service")
+          hyperMediaResponse._links.last._2 should equal(s"${Commons.rootPath}/${Commons.settingsSegment}")
         }
       }
     }
