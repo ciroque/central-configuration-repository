@@ -2,11 +2,12 @@ package org.ciroque.ccr.datastores
 
 import java.util.UUID
 
-import com.mongodb.DBObject
+import com.mongodb._
 import com.mongodb.casbah.Implicits._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.{MongoClient, MongoCollection}
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
@@ -30,13 +31,14 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
 
   val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
 
-  override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
+  override def insertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
     val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
-    withImplicitLogging("MongoSettingsDataStore::upsertConfiguration") {
+    withImplicitLogging("MongoSettingsDataStore::insertConfiguration") {
       recordValue("given-configuration", configuration.toJson.toString())
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
       executeInCollection { collection =>
-        collection += toMongoDbObject(validatedConfiguration)
+        collection.insert(toMongoDbObject(validatedConfiguration))
+//        collection += toMongoDbObject(validatedConfiguration)
         DataStoreResults.Added(validatedConfiguration)
       }
     }
@@ -139,8 +141,15 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
 
     val collection = client(settings.database)(settings.catalog)
 
+    def getMongoExceptionMessage(ex: Throwable): String = {
+      ex match {
+        case dk: DuplicateKeyException => Commons.DatastoreErrorMessages.DuplicateKeyError
+        case _ => ex.getClass.toString
+      }
+    }
+
     Future(fx(collection)).recoverWith {
-      case ex => Future.successful(DataStoreResults.Failure("FAILED", ex))
+      case ex => Future.successful(DataStoreResults.Failure(getMongoExceptionMessage(ex), ex))
     }
   }
 
@@ -188,7 +197,6 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def fromMongoDbObject(dbo: DBObject): Configuration = {
-    import com.mongodb.BasicDBList
     import org.ciroque.ccr.core.Commons
     RegisterJodaTimeConversionHelpers() // TODO: Can this be done at a broader scope and less frequently?
     val db = dbo.toMap

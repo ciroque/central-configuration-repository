@@ -1,5 +1,7 @@
 package org.ciroque.ccr.datastores
 
+import java.util.UUID
+
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
@@ -13,13 +15,17 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
 
   private var configurations = List[Configuration]()
 
-  override def upsertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
-    withImplicitLogging("InMemorySettingsDataStore::upsertConfiguration") {
+  override def insertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
+    withImplicitLogging("InMemorySettingsDataStore::insertConfiguration") {
       val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
       recordValue("given-configuration", configuration.toJson.toString())
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
-      configurations = configurations :+ validatedConfiguration
-      Future.successful(DataStoreResults.Added(validatedConfiguration))
+      if(idAlreadyInCollection(validatedConfiguration._id)) {
+        Future.successful(DataStoreResults.Failure(Commons.DatastoreErrorMessages.DuplicateKeyError))
+      } else {
+        configurations = configurations :+ validatedConfiguration
+        Future.successful(DataStoreResults.Added(validatedConfiguration))
+      }
     }
   }
 
@@ -76,6 +82,10 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       recordValue(Commons.KeyStrings.ScopeKey, scope)
       Future.successful(composeInterstitialResultOptionFor(settingsIn(environment, application, scope), () => s"environment '$environment' / application '$application' / scope '$scope' combination was not found"))
     }
+  }
+
+  private def idAlreadyInCollection(id: UUID): Boolean = {
+    applyFilter(c => c._id == id).nonEmpty
   }
 
   private def settingsIn(environment: String, application: String, scope: String): List[String] = {

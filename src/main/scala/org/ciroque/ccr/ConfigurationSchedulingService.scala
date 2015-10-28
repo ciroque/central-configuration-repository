@@ -38,7 +38,7 @@ trait ConfigurationSchedulingService
           post { context =>
             withImplicitLogging("ConfigurationSchedulingService::settingUpsertRoute::POST") {
               for {
-                eventualResult <- dataStore.upsertConfiguration(configuration)
+                eventualResult <- dataStore.insertConfiguration(configuration)
               } yield {
                 val (result: JsValue, statusCode: StatusCode) = processDataStoreResult(eventualResult)
                 context.complete(HttpResponse(

@@ -10,7 +10,7 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
 
   final val SOURCE_ID_MAX_LENGTH = 64
 
-  def upsertConfiguration(configuration: Configuration): Future[DataStoreResult]
+  def insertConfiguration(configuration: Configuration): Future[DataStoreResult]
 
   def retrieveApplications(environment: String): Future[DataStoreResult]
 

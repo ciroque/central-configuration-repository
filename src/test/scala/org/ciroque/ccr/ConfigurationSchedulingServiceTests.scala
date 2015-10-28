@@ -53,7 +53,7 @@ class ConfigurationSchedulingServiceTests
         import org.ciroque.ccr.models.ConfigurationFactory._
         expecting {
           dataStore
-            .upsertConfiguration(isA(classOf[Configuration]))
+            .insertConfiguration(isA(classOf[Configuration]))
             .andReturn(Future.successful(DataStoreResults.Added(testConfiguration)))
         }
         whenExecuting(dataStore) {
@@ -72,7 +72,7 @@ class ConfigurationSchedulingServiceTests
         val expectedThrowable = new Exception("The underlying data store experienced an error")
         expecting {
           dataStore
-            .upsertConfiguration(isA(classOf[Configuration]))
+            .insertConfiguration(isA(classOf[Configuration]))
             .andReturn(Future.successful(DataStoreResults.Failure(expectedErrorMessage, expectedThrowable)))
         }
         whenExecuting(dataStore) {

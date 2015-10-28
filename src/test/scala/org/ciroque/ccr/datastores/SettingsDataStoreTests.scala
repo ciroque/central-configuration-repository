@@ -2,6 +2,7 @@ package org.ciroque.ccr.datastores
 
 import java.util.UUID
 
+import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
@@ -100,46 +101,46 @@ abstract class SettingsDataStoreTests
   }
 
   override def beforeAll(): Unit = {
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(qaEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application2, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
 
     /* --- temporality --- */
-    settingsDataStore.upsertConfiguration(activeLogLevelConfiguration)
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(activeLogLevelConfiguration)
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().plusDays(7), 360000L))
 
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().plusDays(8), DateTime.now().plusYears(1), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().plusDays(8), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, application3, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
 
-    settingsDataStore.upsertConfiguration(defaultLogRotationConfiguration)
-    settingsDataStore.upsertConfiguration(ConfigurationFactory(prodEnvironment, "app4", loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
+    settingsDataStore.insertConfiguration(defaultLogRotationConfiguration)
+    settingsDataStore.insertConfiguration(ConfigurationFactory(prodEnvironment, "app4", loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().plusDays(7), DateTime.now().plusYears(1), 360000L))
 
-    settingsDataStore.upsertConfiguration(wildcardConfiguration)
+    settingsDataStore.insertConfiguration(wildcardConfiguration)
 
-    settingsDataStore.upsertConfiguration(configurationWithSourceId)
-    settingsDataStore.upsertConfiguration(alternateConfigurationWithSourceId)
+    settingsDataStore.insertConfiguration(configurationWithSourceId)
+    settingsDataStore.insertConfiguration(alternateConfigurationWithSourceId)
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -152,13 +153,22 @@ abstract class SettingsDataStoreTests
 
   describe("configurations") {
 
-    it("Upserts a valid configuration") {
-      whenReady(settingsDataStore.upsertConfiguration(testConfiguration), Timeout(Span.Max)) {
+    it("Inserts a valid configuration") {
+      whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
         retrievedConfiguration =>
           retrievedConfiguration should be(DataStoreResults.Added(testConfiguration))
       }
 
-      assertLogEvents("upsertConfiguration", 1, "added-configuration")
+      assertLogEvents("insertConfiguration", 1, "added-configuration")
+    }
+
+    it("Fails to insert an existing configuration") {
+      whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
+        case failure: DataStoreResults.Failure => failure.message should be(Commons.DatastoreErrorMessages.DuplicateKeyError)
+        case _ => fail("should have encountered a Failure in the datastore (Duplicate Key)")
+      }
+
+      assertLogEvents("insertConfiguration", 1, "added-configuration")
     }
 
     it("Returns a single, active configuration when given a valid path") {
@@ -228,7 +238,7 @@ abstract class SettingsDataStoreTests
         10L
       )
 
-      whenReady(settingsDataStore.upsertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+      whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
         retrievedConfiguration =>
           retrievedConfiguration should be(DataStoreResults.Added(configurationWithSourceId))
       }
@@ -256,12 +266,12 @@ abstract class SettingsDataStoreTests
       val expectedKey = ConfigurationFactory.Key(uniqueEnvironment, uniqueApplication, uniqueScope, uniqueSetting, Some(expectedSourceId))
       val expectedConfiguration = configurationWithSourceId.copy(key = expectedKey)
 
-      whenReady(settingsDataStore.upsertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+      whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
         retrievedConfiguration =>
           retrievedConfiguration should be(DataStoreResults.Added(expectedConfiguration))
       }
 
-      assertLogEvents("upsertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
+      assertLogEvents("insertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
     }
 
     it("allows filtering by the sourceId") {

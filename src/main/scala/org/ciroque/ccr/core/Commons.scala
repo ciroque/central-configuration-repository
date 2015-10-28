@@ -28,6 +28,10 @@ object Commons {
     (InternalServerErrorResponse(message, cause.getMessage).toJson, StatusCodes.InternalServerError)
   }
 
+  object DatastoreErrorMessages {
+    final val DuplicateKeyError = "Duplicate Key Error - Attempted to insert a Configuration with an already existing id."
+  }
+
   object KeyStrings {
     final val ActorSystemName = "central-configuration-repository-system"
     final val IdKey = "_id"
