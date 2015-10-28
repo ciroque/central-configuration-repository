@@ -30,6 +30,7 @@ object Commons {
 
   object DatastoreErrorMessages {
     final val DuplicateKeyError = "Duplicate Key Error - Attempted to insert a Configuration with an already existing id."
+    final val NotFoundError = "Not Found Error - The configuration was not found"
   }
 
   object KeyStrings {

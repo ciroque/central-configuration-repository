@@ -5,7 +5,7 @@ import java.util.UUID
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound}
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.ciroque.ccr.models.ConfigurationFactory.{Temporality, Configuration}
 import org.joda.time.DateTime
 import org.scalatest._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -169,6 +169,20 @@ abstract class SettingsDataStoreTests
       }
 
       assertLogEvents("insertConfiguration", 1, "added-configuration")
+    }
+
+    it("Updates an existing configuration") {
+      val modifiedConfiguration = testConfiguration.copy(
+        temporality = Temporality(
+          testConfiguration.temporality.effectiveAt,
+          testConfiguration.temporality.expiresAt,
+          5000))
+      whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
+        dsr =>
+          dsr should be(DataStoreResults.Updated(testConfiguration, modifiedConfiguration))
+      }
+
+      assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
     }
 
     it("Returns a single, active configuration when given a valid path") {

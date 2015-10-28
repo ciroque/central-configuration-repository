@@ -38,8 +38,24 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
       executeInCollection { collection =>
         collection.insert(toMongoDbObject(validatedConfiguration))
-//        collection += toMongoDbObject(validatedConfiguration)
         DataStoreResults.Added(validatedConfiguration)
+      }
+    }
+  }
+
+  override def updateConfiguration(configuration: Configuration): Future[DataStoreResult] = {
+    val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
+    withImplicitLogging("MongoSettingsDataStore::updateConfiguration") {
+      recordValue("original-configuration", configuration.toJson.toString())
+      recordValue("validated-configuration", validatedConfiguration.toJson.toString())
+      val queryDoc = new BasicDBObject("_id", validatedConfiguration._id)
+      executeInCollection { collection =>
+        collection.findAndModify(queryDoc, toMongoDbObject(validatedConfiguration)) match {
+          case Some(foundDocument) =>
+            val previousConfiguration = fromMongoDbObject(foundDocument)
+            DataStoreResults.Updated(previousConfiguration, validatedConfiguration)
+          case None => DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError)
+        }
       }
     }
   }
@@ -148,7 +164,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       }
     }
 
-    Future(fx(collection)).recoverWith {
+    Future {
+        fx(collection)
+    }.recoverWith {
       case ex => Future.successful(DataStoreResults.Failure(getMongoExceptionMessage(ex), ex))
     }
   }
@@ -237,6 +255,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def fromMongo(a: Any): JsValue = a match {
+    case uuid: UUID => JsString(uuid.toString)
     case id: ObjectId => JsString(id.toString)
     case list: BasicDBList => fromMongoDBList(list)
     case obj: DBObject => fromMongoDBObject(obj)
@@ -248,7 +267,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     case decimal: scala.BigDecimal => JsNumber(decimal)
     case string: String => JsString(string)
     case boolean: Boolean => JsBoolean(boolean)
-    case null => import spray.json.JsNull
-      JsNull
+    case null => JsNull
+    case jdt: DateTime => JsString(jdt.toString)
   }
 }

@@ -29,6 +29,22 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
+  override def updateConfiguration(configuration: Configuration): Future[DataStoreResult] = {
+    withImplicitLogging("InMemorySettingsDataStore::updateConfiguration") {
+      val existing = findById(configuration._id)
+      val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
+      if (existing.isDefined) {
+        recordValue("original-configuration", configuration.toJson.toString())
+        recordValue("validated-configuration", validatedConfiguration.toJson.toString())
+        val actualExisting = existing.get
+        configurations = configurations.updated(configurations.indexOf(actualExisting), validatedConfiguration)
+        Future.successful(DataStoreResults.Updated(actualExisting, configuration))
+      } else {
+        Future.successful(DataStoreResults.NotFound(""))
+      }
+    }
+  }
+
   override def retrieveEnvironments(): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore.retrieveEnvironments") {
       Future.successful(composeInterstitialResultOptionFor(allEnvironments(), () => ""))
@@ -84,8 +100,12 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
+  private def findById(id: UUID): Option[Configuration] = {
+    applyFilter(c => c._id == id).headOption
+  }
+
   private def idAlreadyInCollection(id: UUID): Boolean = {
-    applyFilter(c => c._id == id).nonEmpty
+    findById(id).isDefined
   }
 
   private def settingsIn(environment: String, application: String, scope: String): List[String] = {

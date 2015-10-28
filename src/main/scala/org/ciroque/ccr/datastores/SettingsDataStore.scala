@@ -7,8 +7,9 @@ import org.slf4j.Logger
 import scala.concurrent.Future
 
 abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
-
   final val SOURCE_ID_MAX_LENGTH = 64
+
+  def updateConfiguration(configuration: Configuration): Future[DataStoreResult]
 
   def insertConfiguration(configuration: Configuration): Future[DataStoreResult]
 
