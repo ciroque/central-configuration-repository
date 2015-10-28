@@ -185,6 +185,10 @@ abstract class SettingsDataStoreTests
       assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
     }
 
+    it("fails to update a configuration that does not exist") {
+      pending
+    }
+
     it("Returns a single, active configuration when given a valid path") {
       whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application3, loggingScope, logLevelSetting), Timeout(Span.Max)) {
         case Found(config) =>
