@@ -33,14 +33,14 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     withImplicitLogging("InMemorySettingsDataStore::updateConfiguration") {
       val existing = findById(configuration._id)
       val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))
+      recordValue("original-configuration", configuration.toJson.toString())
+      recordValue("validated-configuration", validatedConfiguration.toJson.toString())
       if (existing.isDefined) {
-        recordValue("original-configuration", configuration.toJson.toString())
-        recordValue("validated-configuration", validatedConfiguration.toJson.toString())
         val actualExisting = existing.get
         configurations = configurations.updated(configurations.indexOf(actualExisting), validatedConfiguration)
         Future.successful(DataStoreResults.Updated(actualExisting, configuration))
       } else {
-        Future.successful(DataStoreResults.NotFound(""))
+        Future.successful(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError))
       }
     }
   }

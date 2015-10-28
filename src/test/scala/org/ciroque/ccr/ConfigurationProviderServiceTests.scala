@@ -64,8 +64,8 @@ class ConfigurationProviderServiceTests
 
       it("should return a 418 I'm a Tea Pot on the root app route with trailing slash") {
         pendingUntilFixed {
-        assertHyperMediaResponseOnRoots(s"/${Commons.rootPath}/")
-      }
+          assertHyperMediaResponseOnRoots(s"/${Commons.rootPath}/")
+        }
       }
 
       def assertHyperMediaResponseOnRoots(path: String) = {

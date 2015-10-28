@@ -186,7 +186,18 @@ abstract class SettingsDataStoreTests
     }
 
     it("fails to update a configuration that does not exist") {
-      pending
+      val modifiedConfiguration = testConfiguration.copy(
+        _id = UUID.randomUUID(),
+        temporality = Temporality(
+          testConfiguration.temporality.effectiveAt,
+          testConfiguration.temporality.expiresAt,
+          5000))
+      whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
+        dsr =>
+          dsr should be(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError))
+      }
+
+      assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
     }
 
     it("Returns a single, active configuration when given a valid path") {
