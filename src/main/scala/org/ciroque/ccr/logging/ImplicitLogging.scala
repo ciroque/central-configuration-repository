@@ -12,7 +12,6 @@ object ImplicitLogging {
   private[logging] val activeLoggers = new DynamicVariable[LogEntryBuilder](new LogEntryBuilder)
 
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
-//    activeLoggers.set(new LogEntryBuilder)
     val started: DateTime = DateTime.now(DateTimeZone.UTC)
 
     try {
