@@ -5,12 +5,14 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.Logger
 import spray.json.{DefaultJsonProtocol, _}
 
+import scala.util.DynamicVariable
+
 object ImplicitLogging {
 
-  private[logging] val activeLoggers = new ThreadLocal[LogEntryBuilder]
+  private[logging] val activeLoggers = new DynamicVariable[LogEntryBuilder](new LogEntryBuilder)
 
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
-    activeLoggers.set(new LogEntryBuilder)
+//    activeLoggers.set(new LogEntryBuilder)
     val started: DateTime = DateTime.now(DateTimeZone.UTC)
 
     try {
@@ -30,7 +32,7 @@ object ImplicitLogging {
     getCurrentImplicitLogger.result = Error(msg)
   }
 
-  def getCurrentImplicitLogger = activeLoggers.get
+  def getCurrentImplicitLogger = activeLoggers.value
 
   def recordValue(name: String, value: String) = {
     getCurrentImplicitLogger.addValue(name, value)
