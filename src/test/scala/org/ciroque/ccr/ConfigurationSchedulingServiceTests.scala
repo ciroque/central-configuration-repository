@@ -5,7 +5,8 @@ import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.responses.ConfigurationResponse
+import org.ciroque.ccr.models.ConfigurationFactory._
+import org.ciroque.ccr.responses.{HyperMediaMessageResponse, ConfigurationUpdateResponse, ConfigurationResponse}
 import org.easymock.EasyMock._
 import org.joda.time.DateTime
 import org.scalatest.mock.EasyMockSugar
@@ -26,7 +27,7 @@ class ConfigurationSchedulingServiceTests
   describe("ConfigurationSchedulingService") {
     import spray.json.JsString
 
-    val settingsPath = s"/${Commons.rootPath}/${Commons.schedulingSegment}"
+    val schedulingPath = s"/${Commons.rootPath}/${Commons.schedulingSegment}"
 
     val testEnvironment = "test-environment"
     val testApplication = "test-application"
@@ -50,14 +51,13 @@ class ConfigurationSchedulingServiceTests
 
     describe("configuration creation") {
       it("should return a 201 Created when creation is successful") {
-        import org.ciroque.ccr.models.ConfigurationFactory._
         expecting {
           dataStore
             .insertConfiguration(isA(classOf[Configuration]))
             .andReturn(Future.successful(DataStoreResults.Added(testConfiguration)))
         }
         whenExecuting(dataStore) {
-          Post(s"$settingsPath", testConfiguration) ~> routes ~> check {
+          Post(s"$schedulingPath", testConfiguration) ~> routes ~> check {
             status should equal(StatusCodes.OK)
             import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
             val returnedConfiguration = responseAs[ConfigurationResponse]
@@ -76,8 +76,45 @@ class ConfigurationSchedulingServiceTests
             .andReturn(Future.successful(DataStoreResults.Failure(expectedErrorMessage, expectedThrowable)))
         }
         whenExecuting(dataStore) {
-          Post(s"$settingsPath/", testConfiguration) ~> routes ~> check {
+          Post(s"$schedulingPath/", testConfiguration) ~> routes ~> check {
             status should equal(StatusCodes.InternalServerError)
+          }
+        }
+      }
+    }
+
+    describe("configuration update") {
+      it("should return a 200 OK when the configuration is updated successfully") {
+        val updatedConfiguration = testConfiguration.copy(value = JsString("UPDATED"))
+        expecting {
+          dataStore
+            .updateConfiguration(isA(classOf[Configuration]))
+            .andReturn(Future.successful(DataStoreResults.Updated(testConfiguration, updatedConfiguration)))
+        }
+        whenExecuting(dataStore) {
+          Put(s"$schedulingPath/", updatedConfiguration) ~> routes ~> check {
+            status should equal(StatusCodes.OK)
+            import org.ciroque.ccr.responses.ConfigurationUpdateResponseProtocol._
+            val configurationUpdateResponse = responseAs[ConfigurationUpdateResponse]
+            configurationUpdateResponse.previous.toJson should equal(testConfiguration.toJson)
+            configurationUpdateResponse.updated.toJson should equal(updatedConfiguration.toJson)
+          }
+        }
+      }
+
+      it("should return a 404 Not Found when the configuration to be updated is not found") {
+        val updatedConfiguration = testConfiguration.copy(value = JsString("UPDATED"))
+        expecting {
+          dataStore
+            .updateConfiguration(isA(classOf[Configuration]))
+            .andReturn(Future.successful(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError)))
+        }
+        whenExecuting(dataStore) {
+          Put(s"$schedulingPath/", updatedConfiguration) ~> routes ~> check {
+            status should equal(StatusCodes.NotFound)
+            import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
+            val hypermediaMessageResponse = responseAs[HyperMediaMessageResponse]
+            hypermediaMessageResponse.message should be(Commons.DatastoreErrorMessages.NotFoundError)
           }
         }
       }
