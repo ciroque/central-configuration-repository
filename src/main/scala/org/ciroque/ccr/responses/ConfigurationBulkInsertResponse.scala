@@ -9,7 +9,7 @@ object BulkConfigurationResponseProtocol extends DefaultJsonProtocol {
 }
 
 case class BulkConfigurationInsertResponse(results: List[BulkConfigurationStatus]) extends CcrResponse {
-  def isSuccess = results.forall(r ⇒ r.status == 201)
+  def isSuccess = results.forall(r ⇒ r != null && r.status == 201)
 }
 
 case class BulkConfigurationStatus(status: Int, configuration: Configuration, href: String, message: Option[String] = None)

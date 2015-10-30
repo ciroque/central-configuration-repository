@@ -37,7 +37,7 @@ trait BulkConfigurationSchedulingService
                   val bulkConfigurationStatuses = dataStoreResults.map {
                     case Added(config: Configuration) ⇒ BulkConfigurationStatus(StatusCodes.Created.intValue, config, "")
                     case Errored(item: Configuration, msg: String) ⇒ BulkConfigurationStatus(StatusCodes.UnprocessableEntity.intValue, item, "", message = Some(msg))
-                    case Failure(msg: String, cause: Throwable) ⇒ BulkConfigurationStatus(StatusCodes.InternalServerError.intValue, null, msg)
+                    case Failure(msg: String, cause: Throwable) ⇒ BulkConfigurationStatus(StatusCodes.InternalServerError.intValue, null, "/error", message = Some(msg))
                   }
 
                   BulkConfigurationInsertResponse(bulkConfigurationStatuses)

@@ -114,8 +114,6 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         whenExecuting(dataStore) {
           Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
             status should equal(StatusCodes.InternalServerError)
-//            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
-//            actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
           }
         }
       }
