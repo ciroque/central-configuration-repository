@@ -2,7 +2,7 @@ package org.ciroque.ccr
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.ciroque.ccr.core.{Commons, CcrService}
-import org.ciroque.ccr.datastores.DataStoreResults.Added
+import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.SettingsDataStore
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory._
@@ -30,12 +30,14 @@ trait BulkConfigurationSchedulingService
         configurations ⇒
           post { context ⇒
             withImplicitLogging("ConfigurationBulkSchedulingService::POST") {
+              recordValue("configurations", configurations.toJson.toString())
               val dsr = dataStore.bulkInsertConfigurations(configurations)
               val bulkConfigurationInsertResponse = dsr.map {
                 dataStoreResults ⇒
                   val bulkConfigurationStatuses = dataStoreResults.map {
                     case Added(config: Configuration) ⇒ BulkConfigurationStatus(StatusCodes.Created.intValue, config, "")
-                    case _ ⇒ BulkConfigurationStatus(StatusCodes.InternalServerError.intValue, null, "")
+                    case Errored(item: Configuration, msg: String) ⇒ BulkConfigurationStatus(StatusCodes.UnprocessableEntity.intValue, item, "", message = Some(msg))
+                    case Failure(msg: String, cause: Throwable) ⇒ BulkConfigurationStatus(StatusCodes.InternalServerError.intValue, null, msg)
                   }
 
                   BulkConfigurationInsertResponse(bulkConfigurationStatuses)
@@ -43,9 +45,9 @@ trait BulkConfigurationSchedulingService
               for {
                 eventualResult ← bulkConfigurationInsertResponse
               } yield {
-
+                recordValue("result", eventualResult.toJson.toString())
                 context.complete(HttpResponse(
-                  StatusCodes.Created,
+                  if(eventualResult.isSuccess) StatusCodes.Created else StatusCodes.MultiStatus,
                   HttpEntity(`application/json`, eventualResult.toJson.toString()),
                   Commons.corsHeaders))
               }

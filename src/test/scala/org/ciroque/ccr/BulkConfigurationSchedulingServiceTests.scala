@@ -27,10 +27,14 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
   with EasyMockSugar {
 
   override def actorRefFactory: ActorRefFactory = system
+
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
   implicit val logger: Logger = new CachingLogger()
 
+  override def beforeEach() = reset(dataStore)
+
   describe("ConfigurationBatchSchedulingService") {
+
     describe("bulk insert") {
 
       val configurationList = ConfigurationList(List(
@@ -39,21 +43,50 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         TestObjectGenerator.configuration
       ))
 
-      val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(configurationList.configurations.map {
-        config ⇒ BulkConfigurationStatus(201, config, "")
-      })
-
-      val dataStoreResults = Future.successful(configurationList.configurations.map {
-        config ⇒ DataStoreResults.Added(config)
-      })
-
       it("should accept a Sequence of Configurations via POST and insert them into the datastore") {
+        val dataStoreResults = Future.successful(configurationList.configurations.map {
+          config ⇒ DataStoreResults.Added(config)
+        })
+
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(configurationList.configurations.map {
+          config ⇒ BulkConfigurationStatus(201, config, "")
+        })
+
         expecting {
           dataStore.bulkInsertConfigurations(isA(classOf[ConfigurationList])).andReturn(dataStoreResults)
         }
         whenExecuting(dataStore) {
           Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
             status should equal(StatusCodes.Created)
+            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
+            actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
+          }
+        }
+      }
+
+      it("should accept a Sequence of Configurations via POST and insert them into the datastore with one failure") {
+        val ErrorMessage = "Just Dumb Luck"
+        val configurations = configurationList.configurations
+        val dataStoreResults = Future.successful(List(
+          DataStoreResults.Added(configurations.head),
+          DataStoreResults.Errored(configurations.apply(1), ErrorMessage),
+          DataStoreResults.Added(configurations.apply(2))
+        ))
+
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(
+          List(
+            BulkConfigurationStatus(201, configurations.head, ""),
+            BulkConfigurationStatus(422, configurations.apply(1), "", Some(ErrorMessage)),
+            BulkConfigurationStatus(201, configurations.apply(2), "")
+          ))
+
+        expecting {
+          dataStore.bulkInsertConfigurations(isA(classOf[ConfigurationList])).andReturn(dataStoreResults)
+        }
+        whenExecuting(dataStore) {
+          Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
+            status should equal(StatusCodes.MultiStatus)
+            println(logger.asInstanceOf[CachingLogger].getEvents)
             val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
             actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
           }
