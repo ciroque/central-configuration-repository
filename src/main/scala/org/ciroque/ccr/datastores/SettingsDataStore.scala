@@ -1,13 +1,17 @@
 package org.ciroque.ccr.datastores
 
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
-import org.ciroque.ccr.models.ConfigurationFactory.{Configuration, Key}
+import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration, Key}
 import org.slf4j.Logger
 
 import scala.concurrent.Future
 
 abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
   final val SOURCE_ID_MAX_LENGTH = 64
+
+  def bulkInsertConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]]
+
+  def bulkUpdateConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]]
 
   def updateConfiguration(configuration: Configuration): Future[DataStoreResult]
 

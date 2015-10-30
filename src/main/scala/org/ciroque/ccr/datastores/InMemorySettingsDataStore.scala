@@ -6,7 +6,7 @@ import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration}
 import org.slf4j.Logger
 
 import scala.concurrent.Future
@@ -171,4 +171,10 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       Future.successful(result)
     }
   }
+
+  // TODO: Implement!
+  override def bulkInsertConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
+
+  // TODO: Implement!
+  override def bulkUpdateConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
 }

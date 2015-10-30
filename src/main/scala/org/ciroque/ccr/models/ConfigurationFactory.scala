@@ -8,10 +8,23 @@ import spray.json._
 
 object ConfigurationFactory extends DefaultJsonProtocol {
 
+
+  implicit object UuidJsonFormat extends JsonFormat[UUID] {
+    def write(x: UUID) = JsString(x toString())
+
+    def read(value: JsValue) = value match {
+      case JsString(x) => UUID.fromString(x)
+      case x => deserializationError("Expected UUID as JsString, but got " + x)
+    }
+  }
+
   val DefaultEnvironment = "default"
+
   implicit val KeyResponseFormat = jsonFormat5(Key.apply)
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
+  implicit val ConfigurationListFormat = jsonFormat1(ConfigurationList.apply)
+
   val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
 
   def apply(environment: String,
@@ -59,6 +72,8 @@ object ConfigurationFactory extends DefaultJsonProtocol {
 
   case class Temporality(effectiveAt: DateTime, expiresAt: DateTime, ttl: Long)
 
+  case class ConfigurationList(configurations: List[Configuration])
+
   case class Configuration(_id: UUID, key: Key, value: JsValue, temporality: Temporality) {
     def isActive = {
 
@@ -68,15 +83,6 @@ object ConfigurationFactory extends DefaultJsonProtocol {
       }
 
       key.environment.toLowerCase == DefaultEnvironment || temporallyActive()
-    }
-  }
-
-  implicit object UuidJsonFormat extends JsonFormat[UUID] {
-    def write(x: UUID) = JsString(x toString())
-
-    def read(value: JsValue) = value match {
-      case JsString(x) => UUID.fromString(x)
-      case x => deserializationError("Expected UUID as JsString, but got " + x)
     }
   }
 }
