@@ -86,14 +86,40 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         whenExecuting(dataStore) {
           Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
             status should equal(StatusCodes.MultiStatus)
-            println(logger.asInstanceOf[CachingLogger].getEvents)
             val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
             actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
           }
         }
       }
-    }
 
+      it("handles an exception in dataStore::bulkInsertConfigurations") {
+        val ErrorMessage = "Just Dumb Luck"
+        val configurations = configurationList.configurations
+        val dataStoreResults = Future.successful(List(
+          DataStoreResults.Added(configurations.head),
+          DataStoreResults.Errored(configurations.apply(1), ErrorMessage),
+          DataStoreResults.Added(configurations.apply(2))
+        ))
+
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(
+          List(
+            BulkConfigurationStatus(201, configurations.head, ""),
+            BulkConfigurationStatus(422, configurations.apply(1), "", Some(ErrorMessage)),
+            BulkConfigurationStatus(201, configurations.apply(2), "")
+          ))
+
+        expecting {
+          dataStore.bulkInsertConfigurations(isA(classOf[ConfigurationList])).andThrow(new IllegalArgumentException(ErrorMessage))
+        }
+        whenExecuting(dataStore) {
+          Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
+            status should equal(StatusCodes.InternalServerError)
+//            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
+//            actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
+          }
+        }
+      }
+    }
 
     describe("bulk update") {
 
