@@ -56,7 +56,6 @@ trait BulkConfigurationSchedulingService
     } yield {
       val rval = eventualResult.toJson.toString()
       recordValue("result", rval)
-      println(s"************** $rval")
       context.complete(HttpResponse(
         StatusCode.int2StatusCode(eventualResult.getStatusCode),
         HttpEntity(`application/json`, eventualResult.toJson.toString()),
@@ -78,13 +77,15 @@ trait BulkConfigurationSchedulingService
             BulkConfigurationStatusFactory(StatusCodes.UnprocessableEntity.intValue, item, msg)
 
           case Failure(msg: String, cause: Throwable) ⇒
-            BulkConfigurationStatusFactory(StatusCodes.InternalServerError.intValue, msg)
+            BulkConfigurationStatusFactory(StatusCodes.UnprocessableEntity.intValue, msg)
+
+          case _ =>
+            BulkConfigurationStatusFactory(StatusCodes.Unauthorized.intValue, s"$dataStoreResults")
         }
 
         BulkConfigurationResponse(bulkConfigurationStatuses)
-    }
+    }.recoverWith { case t: Throwable => Future.successful(BulkConfigurationResponse.FailedBulkConfigurationResponse(t.getMessage)) }
   }
-
 
   def routes = bulkRoute
 }

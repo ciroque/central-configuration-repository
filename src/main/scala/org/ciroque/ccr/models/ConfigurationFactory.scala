@@ -8,7 +8,6 @@ import spray.json._
 
 object ConfigurationFactory extends DefaultJsonProtocol {
 
-
   implicit object UuidJsonFormat extends JsonFormat[UUID] {
     def write(x: UUID) = JsString(x toString())
 

@@ -7,7 +7,7 @@ import spray.json.DefaultJsonProtocol
 
 object BulkConfigurationResponseProtocol extends DefaultJsonProtocol {
   implicit val BulkConfigurationStatusFormat = jsonFormat5(BulkConfigurationStatus)
-  implicit val BulkConfigurationInsertResponseFormat = jsonFormat1(BulkConfigurationResponse)
+  implicit val BulkConfigurationInsertResponseFormat = jsonFormat1(BulkConfigurationResponse.apply)
 }
 
 case class BulkConfigurationResponse(results: List[BulkConfigurationStatus]) extends CcrResponse {
@@ -21,6 +21,11 @@ case class BulkConfigurationResponse(results: List[BulkConfigurationStatus]) ext
   }
 }
 
+object BulkConfigurationResponse {
+  final def FailedBulkConfigurationResponse(message: String): BulkConfigurationResponse =
+    BulkConfigurationResponse(List(BulkConfigurationStatusFactory.FailedBulkConfigurationStatus(message)))
+}
+
 case class BulkConfigurationStatus(
   status: Int,
   configuration: Configuration,
@@ -31,11 +36,13 @@ case class BulkConfigurationStatus(
   other match {
     case None ⇒ ()
     case Some(o) ⇒
-      assert(o.key == configuration.key)
+      assert(o._id == configuration._id, s"Configuration Ids do not match. L: ${o.key}, R: ${configuration.key}")
   }
 }
 
 object BulkConfigurationStatusFactory {
+
+  final def FailedBulkConfigurationStatus(message: String) = apply(500, message)
 
   def apply(
     status: Int,
@@ -43,28 +50,29 @@ object BulkConfigurationStatusFactory {
     other: Option[Configuration],
     href: String,
     message: Option[String]): BulkConfigurationStatus = {
+
     BulkConfigurationStatus(status, configuration, other, href, message)
   }
 
   def apply(status: Int, msg: String): BulkConfigurationStatus = {
-    BulkConfigurationStatus(status, ConfigurationFactory.EmptyConfiguration, None, "", Some(msg))
+    apply(status, ConfigurationFactory.EmptyConfiguration, None, "", Some(msg))
   }
 
   def apply(status: Int, configuration: Configuration): BulkConfigurationStatus = {
-    BulkConfigurationStatus(status, configuration, None, buildHref(configuration), None)
+    apply(status, configuration, None, buildHref(configuration), None)
   }
 
   def apply(status: Int, configuration: Configuration, message: String): BulkConfigurationStatus = {
-    BulkConfigurationStatus(status, configuration, None, buildHref(configuration), Some(message))
+    apply(status, configuration, None, buildHref(configuration), Some(message))
   }
 
   def apply(status: Int, configuration: Configuration, other: Configuration): BulkConfigurationStatus = {
-    BulkConfigurationStatus(status, configuration, Some(other), buildHref(configuration), None)
+    apply(status, configuration, Some(other), buildHref(configuration), None)
   }
 
   def buildHref(configuration: Configuration): String = {
     val key = configuration.key
-    val baseHref = s"${Commons.rootPath}/${Commons.settingsSegment}/${key.environment}/${key.application}/${key.scope}/${key.setting}"
+    val baseHref = s"/${Commons.rootPath}/${Commons.settingsSegment}/${key.environment}/${key.application}/${key.scope}/${key.setting}"
     key.sourceId match {
       case None ⇒ baseHref
       case Some(value) ⇒ s"$baseHref?${Commons.KeyStrings.SourceIdKey}=$value"
