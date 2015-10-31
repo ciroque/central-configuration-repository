@@ -77,7 +77,7 @@ trait BulkConfigurationSchedulingService
             BulkConfigurationStatusFactory(StatusCodes.UnprocessableEntity.intValue, item, msg)
 
           case Failure(msg: String, cause: Throwable) ⇒
-            BulkConfigurationStatusFactory(StatusCodes.UnprocessableEntity.intValue, msg)
+            BulkConfigurationStatusFactory(StatusCodes.InternalServerError.intValue, msg)
 
           case _ =>
             BulkConfigurationStatusFactory(StatusCodes.Unauthorized.intValue, s"$dataStoreResults")
