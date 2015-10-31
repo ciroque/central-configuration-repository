@@ -6,7 +6,7 @@ import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.helpers.TestObjectGenerator
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory._
-import org.ciroque.ccr.responses.{BulkConfigurationStatusFactory, BulkConfigurationStatus, BulkConfigurationResponse}
+import org.ciroque.ccr.responses._
 import org.ciroque.ccr.responses.BulkConfigurationResponseProtocol._
 import org.easymock.EasyMock._
 import org.scalatest._
@@ -64,7 +64,7 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         }
       }
 
-      it("should return a 207 Multistatus and appropriate individual results when one insert fails") {
+      it("should return a 207 MultiStatus and appropriate individual results when one insert fails") {
         val ErrorMessage = "Just Dumb Luck"
         val configurations = configurationList.configurations
         val dataStoreResults = Future.successful(List(
@@ -95,18 +95,6 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
       it("handles an exception in dataStore::bulkInsertConfigurations") {
         val ErrorMessage = "Just Dumb Luck"
         val configurations = configurationList.configurations
-        val dataStoreResults = Future.successful(List(
-          DataStoreResults.Added(configurations.head),
-          DataStoreResults.Errored(configurations.apply(1), ErrorMessage),
-          DataStoreResults.Added(configurations.apply(2))
-        ))
-
-        val expectedBulkConfigurationInsertResponse = BulkConfigurationResponse(
-          List(
-            BulkConfigurationStatusFactory(201, configurations.head),
-            BulkConfigurationStatusFactory(422, configurations.apply(1), ErrorMessage),
-            BulkConfigurationStatusFactory(201, configurations.apply(2))
-          ))
 
         expecting {
           dataStore.bulkInsertConfigurations(isA(classOf[ConfigurationList])).andThrow(new IllegalArgumentException(ErrorMessage))
@@ -124,23 +112,23 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
       val cfg2 = TestObjectGenerator.configuration()
       val cfg3 = TestObjectGenerator.configuration()
 
-      val originalConfigurationList = List(cfg1, cfg2, cfg3)
+      val configurations = List(cfg1, cfg2, cfg3)
 
-      val updatedConfigurationList = originalConfigurationList.map(_.copy(value = TestObjectGenerator.randomJsString()))
+      val updatedConfigurationList = configurations.map(_.copy(value = TestObjectGenerator.randomJsString()))
 
       it("should accept a Sequence of Configurations via PUT and update them in the datastore") {
         val dataStoreResults = for {
-          index ← originalConfigurationList.indices
+          index ← configurations.indices
         } yield {
-          val original = originalConfigurationList.apply(index)
+          val original = configurations.apply(index)
           val updated = updatedConfigurationList.apply(index)
           DataStoreResults.Updated(original, updated)
         }
 
         val bulkConfigurationStatuses = for {
-          index ← originalConfigurationList.indices
+          index ← configurations.indices
         } yield {
-          val original = originalConfigurationList.apply(index)
+          val original = configurations.apply(index)
           val updated = updatedConfigurationList.apply(index)
           BulkConfigurationStatusFactory(200, original, updated)
         }
@@ -151,7 +139,7 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
           dataStore.bulkUpdateConfigurations(isA(classOf[ConfigurationList])).andReturn(Future.successful(dataStoreResults.toList))
         }
         whenExecuting(dataStore) {
-          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", ConfigurationList(originalConfigurationList)) ~> routes ~> check {
+          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", ConfigurationList(configurations)) ~> routes ~> check {
             status should equal(StatusCodes.OK)
             val actualBulkConfigurationResponse = responseAs[BulkConfigurationResponse]
             actualBulkConfigurationResponse.toJson should be(expectedBulkConfigurationResponse.toJson)
@@ -163,9 +151,9 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         val FailIndex = 1
         val ErrorMessage = "Something Stupid"
         val dataStoreResults = for {
-          index ← originalConfigurationList.indices
+          index ← configurations.indices
         } yield {
-          val original = originalConfigurationList.apply(index)
+          val original = configurations.apply(index)
           val updated = updatedConfigurationList.apply(index)
           if(index == FailIndex)
             DataStoreResults.Errored(original, ErrorMessage)
@@ -174,9 +162,9 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         }
 
         val bulkConfigurationStatuses = for {
-          index ← originalConfigurationList.indices
+          index ← configurations.indices
         } yield {
-          val original = originalConfigurationList.apply(index)
+          val original = configurations.apply(index)
           if(index == FailIndex)
             BulkConfigurationStatusFactory(422, original, ErrorMessage)
           else {
@@ -191,10 +179,22 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
           dataStore.bulkUpdateConfigurations(isA(classOf[ConfigurationList])).andReturn(Future.successful(dataStoreResults.toList))
         }
         whenExecuting(dataStore) {
-          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", ConfigurationList(originalConfigurationList)) ~> routes ~> check {
+          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", ConfigurationList(configurations)) ~> routes ~> check {
             status should equal(StatusCodes.MultiStatus)
             val actualBulkConfigurationResponse = responseAs[BulkConfigurationResponse]
             actualBulkConfigurationResponse.toJson should be(expectedBulkConfigurationResponse.toJson)
+          }
+        }
+      }
+
+      it("handles an exception in dataStore::bulkUpdateConfigurations") {
+        val ErrorMessage = "Just Dumb Luck"
+        expecting {
+          dataStore.bulkUpdateConfigurations(isA(classOf[ConfigurationList])).andThrow(new IllegalArgumentException(ErrorMessage))
+        }
+        whenExecuting(dataStore) {
+          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", ConfigurationList(configurations)) ~> routes ~> check {
+            status should equal(StatusCodes.InternalServerError)
           }
         }
       }
