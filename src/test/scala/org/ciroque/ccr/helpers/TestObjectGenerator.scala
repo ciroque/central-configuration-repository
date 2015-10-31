@@ -11,6 +11,8 @@ object TestObjectGenerator {
 
   def randomString(length: Int = 10) = scala.util.Random.alphanumeric.take(length).mkString
 
+  def randomJsString(length: Int = 25) = JsString(randomString(length))
+
   def configuration(id: UUID = UUID.randomUUID()): Configuration = ConfigurationFactory(
     id,
     randomString(),
@@ -18,7 +20,7 @@ object TestObjectGenerator {
     randomString(),
     randomString(),
     Some(randomString()),
-    JsString(randomString()),
+    randomJsString(),
     DateTime.now().minusMinutes(Math.random().toInt),
     DateTime.now().plusMinutes(Math.random().toInt),
     Math.random().toLong
