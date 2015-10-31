@@ -6,7 +6,7 @@ import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.helpers.TestObjectGenerator
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory._
-import org.ciroque.ccr.responses.{BulkConfigurationStatus, BulkConfigurationInsertResponse}
+import org.ciroque.ccr.responses.{BulkConfigurationStatusFactory, BulkConfigurationStatus, BulkConfigurationResponse}
 import org.ciroque.ccr.responses.BulkConfigurationResponseProtocol._
 import org.easymock.EasyMock._
 import org.scalatest._
@@ -38,9 +38,9 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
     describe("bulk insert") {
 
       val configurationList = ConfigurationList(List(
-        TestObjectGenerator.configuration,
-        TestObjectGenerator.configuration,
-        TestObjectGenerator.configuration
+        TestObjectGenerator.configuration(),
+        TestObjectGenerator.configuration(),
+        TestObjectGenerator.configuration()
       ))
 
       it("should accept a Sequence of Configurations via POST and insert them into the datastore") {
@@ -48,8 +48,8 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
           config ⇒ DataStoreResults.Added(config)
         })
 
-        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(configurationList.configurations.map {
-          config ⇒ BulkConfigurationStatus(201, config, "")
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationResponse(configurationList.configurations.map {
+          config ⇒ BulkConfigurationStatusFactory(201, config)
         })
 
         expecting {
@@ -58,7 +58,7 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         whenExecuting(dataStore) {
           Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
             status should equal(StatusCodes.Created)
-            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
+            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationResponse]
             actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
           }
         }
@@ -73,11 +73,11 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
           DataStoreResults.Added(configurations.apply(2))
         ))
 
-        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationResponse(
           List(
-            BulkConfigurationStatus(201, configurations.head, ""),
-            BulkConfigurationStatus(422, configurations.apply(1), "", Some(ErrorMessage)),
-            BulkConfigurationStatus(201, configurations.apply(2), "")
+            BulkConfigurationStatusFactory(201, configurations.head),
+            BulkConfigurationStatusFactory(422, configurations.apply(1), ErrorMessage),
+            BulkConfigurationStatusFactory(201, configurations.apply(2))
           ))
 
         expecting {
@@ -86,7 +86,7 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
         whenExecuting(dataStore) {
           Post(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", configurationList) ~> routes ~> check {
             status should equal(StatusCodes.MultiStatus)
-            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationInsertResponse]
+            val actualBulkConfigurationInsertResponse = responseAs[BulkConfigurationResponse]
             actualBulkConfigurationInsertResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
           }
         }
@@ -101,11 +101,11 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
           DataStoreResults.Added(configurations.apply(2))
         ))
 
-        val expectedBulkConfigurationInsertResponse = BulkConfigurationInsertResponse(
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationResponse(
           List(
-            BulkConfigurationStatus(201, configurations.head, ""),
-            BulkConfigurationStatus(422, configurations.apply(1), "", Some(ErrorMessage)),
-            BulkConfigurationStatus(201, configurations.apply(2), "")
+            BulkConfigurationStatusFactory(201, configurations.head),
+            BulkConfigurationStatusFactory(422, configurations.apply(1), ErrorMessage),
+            BulkConfigurationStatusFactory(201, configurations.apply(2))
           ))
 
         expecting {
@@ -120,7 +120,42 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
     }
 
     describe("bulk update") {
+      val cfg1 = TestObjectGenerator.configuration()
+      val cfg2 = TestObjectGenerator.configuration()
+      val cfg3 = TestObjectGenerator.configuration()
 
+      val originalConfigurationList = ConfigurationList(List(cfg1, cfg2, cfg3))
+
+      val updatedConfigurationList = ConfigurationList(List(
+        TestObjectGenerator.configuration(cfg1._id),
+        TestObjectGenerator.configuration(cfg2._id),
+        TestObjectGenerator.configuration(cfg3._id)
+      ))
+
+      it("should accept a Sequence of Configurations via PUT and update them in the datastore") {
+        val dataStoreResults = for {
+          index ← originalConfigurationList.configurations.indices
+        } yield {
+          DataStoreResults.Updated(
+            originalConfigurationList.configurations.apply(index),
+            updatedConfigurationList.configurations.apply(index))
+        }
+
+        val expectedBulkConfigurationInsertResponse = BulkConfigurationResponse(updatedConfigurationList.configurations.map {
+          config ⇒ BulkConfigurationStatusFactory(201, config)
+        })
+
+        expecting {
+          dataStore.bulkUpdateConfigurations(isA(classOf[ConfigurationList])).andReturn(Future.successful(dataStoreResults.toList))
+        }
+        whenExecuting(dataStore) {
+          Put(s"/${Commons.rootPath}/${Commons.schedulingSegment}/${Commons.bulkSegment}", updatedConfigurationList) ~> routes ~> check {
+            status should equal(StatusCodes.OK)
+//            val actualBulkConfigurationResponse = responseAs[BulkConfigurationResponse]
+//            actualBulkConfigurationResponse.toJson should be(expectedBulkConfigurationInsertResponse.toJson)
+          }
+        }
+      }
     }
   }
 }

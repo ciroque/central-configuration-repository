@@ -25,7 +25,8 @@ object ConfigurationFactory extends DefaultJsonProtocol {
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
   implicit val ConfigurationListFormat = jsonFormat1(ConfigurationList.apply)
 
-  val EmptyConfiguration = Configuration(UUID.randomUUID(), Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
+  val EmptyConfigurationId = new UUID(0,0)
+  val EmptyConfiguration = Configuration(EmptyConfigurationId, Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
 
   def apply(environment: String,
             application: String,

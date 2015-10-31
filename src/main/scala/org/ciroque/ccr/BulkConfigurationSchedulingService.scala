@@ -6,14 +6,16 @@ import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.datastores.SettingsDataStore
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory._
-import org.ciroque.ccr.responses.{BulkConfigurationInsertResponse, BulkConfigurationStatus}
+import org.ciroque.ccr.responses.{BulkConfigurationStatusFactory, BulkConfigurationResponse, BulkConfigurationStatus}
 import org.ciroque.ccr.responses.BulkConfigurationResponseProtocol._
 import org.slf4j.Logger
 import spray.http.MediaTypes._
-import spray.http.{HttpEntity, StatusCodes, HttpResponse}
-import spray.routing.HttpService
+import spray.http.{StatusCode, HttpEntity, StatusCodes, HttpResponse}
+import spray.routing.{RequestContext, HttpService}
 import spray.httpx.SprayJsonSupport._
 import spray.json._
+
+import scala.concurrent.Future
 
 trait BulkConfigurationSchedulingService
   extends HttpService
@@ -24,7 +26,7 @@ trait BulkConfigurationSchedulingService
 
   override def getVersion = new SemanticVersion(1, 0, 0)
 
-  def rootBulkRoute = path(Commons.rootPath / Commons.schedulingSegment / Commons.bulkSegment) {
+  def bulkRoute = path(Commons.rootPath / Commons.schedulingSegment / Commons.bulkSegment) {
     pathEndOrSingleSlash {
       entity(as[ConfigurationList]) {
         configurations ⇒
@@ -32,30 +34,57 @@ trait BulkConfigurationSchedulingService
             withImplicitLogging("ConfigurationBulkSchedulingService::POST") {
               recordValue("configurations", configurations.toJson.toString())
               val dsr = dataStore.bulkInsertConfigurations(configurations)
-              val bulkConfigurationInsertResponse = dsr.map {
-                dataStoreResults ⇒
-                  val bulkConfigurationStatuses = dataStoreResults.map {
-                    case Added(config: Configuration) ⇒ BulkConfigurationStatus(StatusCodes.Created.intValue, config, "")
-                    case Errored(item: Configuration, msg: String) ⇒ BulkConfigurationStatus(StatusCodes.UnprocessableEntity.intValue, item, "", message = Some(msg))
-                    case Failure(msg: String, cause: Throwable) ⇒ BulkConfigurationStatus(StatusCodes.InternalServerError.intValue, null, "/error", message = Some(msg))
-                  }
-
-                  BulkConfigurationInsertResponse(bulkConfigurationStatuses)
-              }
-              for {
-                eventualResult ← bulkConfigurationInsertResponse
-              } yield {
-                recordValue("result", eventualResult.toJson.toString())
-                context.complete(HttpResponse(
-                  if(eventualResult.isSuccess) StatusCodes.Created else StatusCodes.MultiStatus,
-                  HttpEntity(`application/json`, eventualResult.toJson.toString()),
-                  Commons.corsHeaders))
-              }
+              val bulkConfigurationResponse = processDataStoreResult(dsr)
+              respond(context, bulkConfigurationResponse)
+            }
+          } ~
+          put { context ⇒
+            withImplicitLogging("ConfigurationBulkSchedulingService::PUT") {
+              recordValue("configurations", configurations.toJson.toString())
+              val dsr = dataStore.bulkUpdateConfigurations(configurations)
+              val bulkConfigurationResponse = processDataStoreResult(dsr)
+              respond(context, bulkConfigurationResponse)
             }
           }
       }
     }
   }
 
-  def routes = rootBulkRoute
+  private def respond(context: RequestContext, response: Future[BulkConfigurationResponse]) = {
+    for {
+      eventualResult ← response
+    } yield {
+      val rval = eventualResult.toJson.toString()
+      recordValue("result", rval)
+      println(s"************** $rval")
+      context.complete(HttpResponse(
+        StatusCode.int2StatusCode(eventualResult.getStatusCode),
+        HttpEntity(`application/json`, eventualResult.toJson.toString()),
+        Commons.corsHeaders))
+    }
+  }
+
+  private def processDataStoreResult(dsr: Future[List[DataStoreResult]]): Future[BulkConfigurationResponse] = {
+    dsr.map {
+      dataStoreResults ⇒
+        val bulkConfigurationStatuses = dataStoreResults.map {
+          case Added(config: Configuration) ⇒
+            BulkConfigurationStatusFactory(StatusCodes.Created.intValue, config)
+
+          case Updated(prevItem: Configuration, newItem: Configuration) ⇒
+            BulkConfigurationStatusFactory(StatusCodes.OK.intValue, prevItem, newItem)
+
+          case Errored(item: Configuration, msg: String) ⇒
+            BulkConfigurationStatusFactory(StatusCodes.UnprocessableEntity.intValue, item, msg)
+
+          case Failure(msg: String, cause: Throwable) ⇒
+            BulkConfigurationStatusFactory(StatusCodes.InternalServerError.intValue, msg)
+        }
+
+        BulkConfigurationResponse(bulkConfigurationStatuses)
+    }
+  }
+
+
+  def routes = bulkRoute
 }

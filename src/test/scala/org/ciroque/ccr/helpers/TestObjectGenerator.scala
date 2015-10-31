@@ -3,6 +3,7 @@ package org.ciroque.ccr.helpers
 import java.util.UUID
 
 import org.ciroque.ccr.models.ConfigurationFactory
+import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import spray.json.JsString
 
@@ -10,8 +11,8 @@ object TestObjectGenerator {
 
   def randomString(length: Int = 10) = scala.util.Random.alphanumeric.take(length).mkString
 
-  def configuration = ConfigurationFactory(
-    UUID.randomUUID(),
+  def configuration(id: UUID = UUID.randomUUID()): Configuration = ConfigurationFactory(
+    id,
     randomString(),
     randomString(),
     randomString(),
