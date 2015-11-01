@@ -29,11 +29,11 @@ object BulkConfigurationResponse {
 case class BulkConfigurationStatus(
   status: Int,
   configuration: Configuration,
-  other: Option[Configuration] = None,
+  updated: Option[Configuration] = None,
   href: String,
   message: Option[String] = None) {
 
-  other match {
+  updated match {
     case None ⇒ ()
     case Some(o) ⇒
       assert(o._id == configuration._id, s"Configuration Ids do not match. L: ${o.key}, R: ${configuration.key}")
