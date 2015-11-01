@@ -16,6 +16,8 @@ import org.joda.time.DateTime
 import org.slf4j.Logger
 import spray.json._
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import scala.concurrent.Future
 
 object MongoSettingsDataStore {
@@ -39,6 +41,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       executeInCollection { collection =>
         collection.insert(toMongoDbObject(validatedConfiguration))
         DataStoreResults.Added(validatedConfiguration)
+      }.recoverWith {
+        case t: Throwable =>
+          setResultException(t)
+          Future.successful(DataStoreResults.Errored(validatedConfiguration, Commons.DatastoreErrorMessages.DuplicateKeyError))
       }
     }
   }
@@ -54,7 +60,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
           case Some(foundDocument) =>
             val previousConfiguration = fromMongoDbObject(foundDocument)
             DataStoreResults.Updated(previousConfiguration, validatedConfiguration)
-          case None => DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError)
+          case None => DataStoreResults.NotFound(Some(validatedConfiguration), Commons.DatastoreErrorMessages.NotFoundError)
         }
       }
     }
@@ -68,7 +74,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       executeInCollection { collection =>
         val results = collection.distinct("key.scope", MongoDBObject("key.environment" -> checkWildcards(environment), "key.application" -> checkWildcards(application)))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
-          case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' combination was not found")
+          case Nil => DataStoreResults.NotFound(None, s"environment '$environment' / application '$application' combination was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
         }
       }
@@ -89,7 +95,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
             "key.application" -> checkWildcards(application),
             "key.scope" -> checkWildcards(scope)))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
-          case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' combination was not found")
+          case Nil => DataStoreResults.NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' combination was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
         }
       }
@@ -105,7 +111,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         val searchTerm = checkWildcards(environment)
         val results = collection.distinct("key.application", MongoDBObject("key.environment" -> searchTerm))
         results.map(res => res.asInstanceOf[String]).sortBy(app => app).toList match {
-          case Nil => DataStoreResults.NotFound(s"environment '$environment' was not found")
+          case Nil => DataStoreResults.NotFound(None, s"environment '$environment' was not found")
           case list: List[String] => DataStoreResults.Found(list.toList)
         }
       }
@@ -142,9 +148,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
           $and("key.application" $eq applicationQuery, "key.scope" $eq scopeQuery, "key.setting" $eq settingQuery)
         val dbResult = collection.find(configurationQuery).toList
         dbResult match {
-          case Nil => DataStoreResults.NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
+          case Nil => DataStoreResults.NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
           case list => list.map(fromMongoDbObject).filter(_.isActive) match {
-            case Nil => NotFound(s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
+            case Nil => NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
             case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
           }
         }
@@ -153,8 +159,6 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def executeInCollection(fx: (MongoCollection) => DataStoreResult): Future[DataStoreResult] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
     val collection = client(settings.database)(settings.catalog)
 
     def getMongoExceptionMessage(ex: Throwable): String = {
@@ -164,11 +168,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       }
     }
 
-    Future {
-        fx(collection)
-    }.recoverWith {
-      case ex => Future.successful(DataStoreResults.Failure(getMongoExceptionMessage(ex), ex))
-    }
+    Future { fx(collection) }
   }
 
   private def toMongoDbObject(configuration: Configuration) = {
@@ -270,10 +270,4 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     case null => JsNull
     case jdt: DateTime => JsString(jdt.toString)
   }
-
-  // TODO: Implement!
-  override def bulkInsertConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
-
-  // TODO: Implement!
-  override def bulkUpdateConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
 }

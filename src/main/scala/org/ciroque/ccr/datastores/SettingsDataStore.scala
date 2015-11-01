@@ -4,14 +4,12 @@ import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration, Key}
 import org.slf4j.Logger
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import scala.concurrent.Future
 
 abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
   final val SOURCE_ID_MAX_LENGTH = 64
-
-  def bulkInsertConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]]
-
-  def bulkUpdateConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]]
 
   def updateConfiguration(configuration: Configuration): Future[DataStoreResult]
 
@@ -26,6 +24,26 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
   def retrieveSettings(environment: String, application: String, scope: String): Future[DataStoreResult]
 
   def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult]
+
+  def bulkInsertConfigurations(configurationList: ConfigurationList): Future[List[DataStoreResult]] = {
+    val listOfFutures = for {
+      configuration <- configurationList.configurations
+    } yield {
+      insertConfiguration(configuration)
+    }
+
+    Future.sequence(listOfFutures)
+  }
+
+  def bulkUpdateConfigurations(configurationList: ConfigurationList): Future[List[DataStoreResult]] = {
+    val listOfFutures = for {
+      configuration <- configurationList.configurations
+    } yield {
+      updateConfiguration(configuration)
+    }
+
+    Future.sequence(listOfFutures)
+  }
 
   protected def checkWildcards(input: String) = {
     if (input.indexOf(".*") > -1)

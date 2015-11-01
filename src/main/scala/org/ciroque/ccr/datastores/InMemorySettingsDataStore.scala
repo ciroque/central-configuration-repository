@@ -12,6 +12,7 @@ import org.slf4j.Logger
 import scala.concurrent.Future
 
 class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDataStore {
+  def reset(): Unit = configurations = List[Configuration]()
 
   private var configurations = List[Configuration]()
 
@@ -21,7 +22,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       recordValue("given-configuration", configuration.toJson.toString())
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
       if(idAlreadyInCollection(validatedConfiguration._id)) {
-        Future.successful(DataStoreResults.Failure(Commons.DatastoreErrorMessages.DuplicateKeyError))
+        Future.successful(DataStoreResults.Errored(validatedConfiguration, Commons.DatastoreErrorMessages.DuplicateKeyError))
       } else {
         configurations = configurations :+ validatedConfiguration
         Future.successful(DataStoreResults.Added(validatedConfiguration))
@@ -40,7 +41,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
         configurations = configurations.updated(configurations.indexOf(actualExisting), validatedConfiguration)
         Future.successful(DataStoreResults.Updated(actualExisting, configuration))
       } else {
-        Future.successful(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError))
+        Future.successful(DataStoreResults.NotFound(Some(validatedConfiguration), Commons.DatastoreErrorMessages.NotFoundError))
       }
     }
   }
@@ -132,7 +133,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
 
   private def composeInterstitialResultOptionFor(list: List[String], buildNotFoundMessage: () => String): DataStoreResult = {
     list match {
-      case Nil => NotFound(buildNotFoundMessage())
+      case Nil => NotFound(None, buildNotFoundMessage())
       case list: List[String] => Found(list)
     }
   }
@@ -161,9 +162,9 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       def findActives = configs.filter(_.isActive)
 
       val result = configs match {
-        case Nil => NotFound(s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' combination was not found")
+        case Nil => NotFound(None, s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' combination was not found")
         case _ => findActives match {
-          case Nil => NotFound(s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' found no active configuration")
+          case Nil => NotFound(None, s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' found no active configuration")
           case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
         }
       }
@@ -171,10 +172,4 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       Future.successful(result)
     }
   }
-
-  // TODO: Implement!
-  override def bulkInsertConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
-
-  // TODO: Implement!
-  override def bulkUpdateConfigurations(configurations: ConfigurationList): Future[List[DataStoreResult]] = Future.successful(List())
 }

@@ -107,7 +107,7 @@ class ConfigurationSchedulingServiceTests
         expecting {
           dataStore
             .updateConfiguration(isA(classOf[Configuration]))
-            .andReturn(Future.successful(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError)))
+            .andReturn(Future.successful(DataStoreResults.NotFound(None, Commons.DatastoreErrorMessages.NotFoundError)))
         }
         whenExecuting(dataStore) {
           Put(s"$schedulingPath/", updatedConfiguration) ~> routes ~> check {

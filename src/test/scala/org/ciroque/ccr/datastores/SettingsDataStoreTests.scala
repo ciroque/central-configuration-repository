@@ -3,9 +3,12 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{Found, NotFound}
+import org.ciroque.ccr.datastores
+import org.ciroque.ccr.datastores.DataStoreResults._
+import org.ciroque.ccr.helpers.TestObjectGenerator
+import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.{Temporality, Configuration}
+import org.ciroque.ccr.models.ConfigurationFactory._
 import org.joda.time.DateTime
 import org.scalatest._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -155,8 +158,7 @@ abstract class SettingsDataStoreTests
 
     it("Inserts a valid configuration") {
       whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
-        retrievedConfiguration =>
-          retrievedConfiguration should be(DataStoreResults.Added(testConfiguration))
+        dsr => dsr should be(DataStoreResults.Added(testConfiguration))
       }
 
       assertLogEvents("insertConfiguration", 1, "added-configuration")
@@ -164,10 +166,11 @@ abstract class SettingsDataStoreTests
 
     it("Fails to insert an existing configuration") {
       whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
-        case failure: DataStoreResults.Failure => failure.message should be(Commons.DatastoreErrorMessages.DuplicateKeyError)
+        case DataStoreResults.Errored(item, message) => message should be(Commons.DatastoreErrorMessages.DuplicateKeyError)
         case _ => fail("should have encountered a Failure in the datastore (Duplicate Key)")
       }
 
+      logger.asInstanceOf[CachingLogger].printLog()
       assertLogEvents("insertConfiguration", 1, "added-configuration")
     }
 
@@ -194,7 +197,7 @@ abstract class SettingsDataStoreTests
           5000))
       whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
         dsr =>
-          dsr should be(DataStoreResults.NotFound(Commons.DatastoreErrorMessages.NotFoundError))
+          dsr should be(DataStoreResults.NotFound(Some(modifiedConfiguration), Commons.DatastoreErrorMessages.NotFoundError))
       }
 
       assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
@@ -210,7 +213,7 @@ abstract class SettingsDataStoreTests
               conf.head.isActive should be(true)
             case something => fail(s"Expected to get a Configuration. Got a $something instead")
           }
-        case NotFound(msg) => fail(s"NotFound -> $msg")
+        case NotFound(Some(config), msg) => fail(s"NotFound -> $msg")
       }
 
       assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application3, loggingScope, logLevelSetting)
@@ -219,7 +222,7 @@ abstract class SettingsDataStoreTests
     it("Returns a NotFound when the environment / application / scope / setting combination does not exist") {
       whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) {
         result =>
-          result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
+          result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
       }
 
       assertLogEvents("retrieveConfiguration", 1, nonExistentSegment)
@@ -228,7 +231,7 @@ abstract class SettingsDataStoreTests
     it("Returns a NotFound when there is no active configuration") {
       whenReady(settingsDataStore.retrieveConfiguration(devEnvironment, application, loggingScope, logLevelSetting), Timeout(Span.Max)) {
         result =>
-          result should be(DataStoreResults.NotFound(s"environment '$devEnvironment' / application '$application' / scope '$loggingScope' / setting '$logLevelSetting' found no active configuration"))
+          result should be(DataStoreResults.NotFound(None, s"environment '$devEnvironment' / application '$application' / scope '$loggingScope' / setting '$logLevelSetting' found no active configuration"))
       }
 
       assertLogEvents("retrieveConfiguration", 1, devEnvironment, application, loggingScope, logLevelSetting)
@@ -321,7 +324,7 @@ abstract class SettingsDataStoreTests
               conf.head.isActive should be(true)
             case something => fail(s"Expected to get a Configuration. Got a $something instead.")
           }
-        case NotFound(msg) => fail(s"NotFound -> $msg")
+        case NotFound(_, msg) => fail(s"NotFound -> $msg")
       }
     }
 
@@ -343,15 +346,108 @@ abstract class SettingsDataStoreTests
               conf.contains(alternateConfigurationWithSourceId)
             case something => fail(s"Expected to get a Configuration. Got a $something instead.")
           }
-        case NotFound(msg) => fail(s"NotFound -> $msg")
+        case NotFound(None, msg) => fail(s"NotFound -> $msg")
+      }
+    }
+
+    describe("Bulk Operations") {
+
+      val originalConfigurations = (for {
+        i <- 1 to 10
+      } yield {
+        TestObjectGenerator.configuration()
+      }).toList
+
+      val modifiedConfigurations = originalConfigurations map { configuration => configuration.copy(value = TestObjectGenerator.randomJsString()) }
+      val nonExistentConfigurations = originalConfigurations map { configuration => configuration.copy(_id = UUID.randomUUID(), value = JsString("NONEXISTENT")) }
+      val mixedConfigurations = modifiedConfigurations zip nonExistentConfigurations flatMap { case (l, r) => Seq(l, r) }
+
+      val originalConfigurationList = ConfigurationList(originalConfigurations)
+      val modifiedConfigurationList = ConfigurationList(modifiedConfigurations)
+      val nonExistentConfigurationList = ConfigurationList(nonExistentConfigurations)
+      val mixedConfigurationList = ConfigurationList(mixedConfigurations)
+
+      it("inserts a list of Configurations successfully") {
+        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList)) {
+          dsrs =>
+            for {
+              index <- originalConfigurations.indices
+              configuration = originalConfigurations.apply(index)
+              dsr = dsrs.apply(index)
+            } yield {
+              dsr should be(DataStoreResults.Added(configuration))
+            }
+        }
+      }
+
+      it("fails to insert a list of Configurations that exist already") {
+        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList)) {
+          dsrs =>
+            for {
+              index <- originalConfigurations.indices
+              configuration = originalConfigurations.apply(index)
+              dsr = dsrs.apply(index)
+            } yield {
+              dsr should be(DataStoreResults.Errored(configuration, Commons.DatastoreErrorMessages.DuplicateKeyError))
+            }
+        }
+      }
+
+      it("updates a list of Configurations successfully") {
+        whenReady(settingsDataStore.bulkUpdateConfigurations(modifiedConfigurationList)) {
+          dsrs =>
+            for {
+              index <- modifiedConfigurations.indices
+              originalConfiguration = originalConfigurations.apply(index)
+              updatedConfiguration = modifiedConfigurations.apply(index)
+              dsr = dsrs.apply(index)
+            } yield {
+              dsr should be(DataStoreResults.Updated(originalConfiguration, updatedConfiguration))
+            }
+        }
+      }
+
+      it("fails to update a list of Configurations that exist already") {
+        whenReady(settingsDataStore.bulkUpdateConfigurations(nonExistentConfigurationList)) {
+          dsrs =>
+            for {
+              index <- nonExistentConfigurations.indices
+              configuration = nonExistentConfigurations.apply(index)
+              dsr = dsrs.apply(index)
+            } yield {
+              dsr should be(DataStoreResults.NotFound(Some(configuration), Commons.DatastoreErrorMessages.NotFoundError))
+            }
+        }
+      }
+
+      it("handles a mix of existing and non-existing Configuration on an update") {
+        whenReady(settingsDataStore.bulkUpdateConfigurations(mixedConfigurationList)) {
+          dsrs =>
+            for {
+              index <- mixedConfigurations.indices
+              configuration = mixedConfigurations.apply(index)
+              dsr = dsrs.apply(index)
+            } yield {
+              dsr match {
+                case DataStoreResults.Updated(originalConfiguration, modifiedConfiguration) =>
+                  modifiedConfiguration should be(configuration)
+                case NotFound(Some(notFoundConfiguration), message) =>
+                  notFoundConfiguration should be(configuration)
+                  message should be(Commons.DatastoreErrorMessages.NotFoundError)
+              }
+            }
+        }
       }
     }
   }
 
   describe("environments") {
     it("Returns the correct environments") {
-      whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.Found(List[String](uniqueEnvironment, "default", devEnvironment, sourceIdEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment).sortBy(s => s)))
+      val expectedEnvironments = List[String](uniqueEnvironment, "default", devEnvironment, sourceIdEnvironment, wildcardEnvironment, prodEnvironment, qaEnvironment, testEnvironment)
+        .sortBy(s => s)
+      whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) {
+        case Found(environments) =>
+          expectedEnvironments map { environment => environments should contain(environment)}
       }
 
       assertLogEvents("retrieveEnvironments", 1)
@@ -369,7 +465,7 @@ abstract class SettingsDataStoreTests
 
     it("Returns a NotFound when the given environment does not exist") {
       whenReady(settingsDataStore.retrieveApplications(nonExistentSegment), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' was not found"))
+        result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' was not found"))
       }
 
       assertLogEvents("retrieveApplications", 1, nonExistentSegment)
@@ -423,7 +519,7 @@ abstract class SettingsDataStoreTests
 
     it("Returns a NotFound when the given environment / application combination does not exist") {
       whenReady(settingsDataStore.retrieveScopes(nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' combination was not found"))
+        result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' / application '$nonExistentSegment' combination was not found"))
       }
 
       assertLogEvents("retrieveScopes", 1, nonExistentSegment)
@@ -488,7 +584,7 @@ abstract class SettingsDataStoreTests
 
     it("Returns a NotFound when the given environment / application combination does not exist") {
       whenReady(settingsDataStore.retrieveSettings(nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) { result =>
-        result should be(DataStoreResults.NotFound(s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' combination was not found"))
+        result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' combination was not found"))
       }
 
       assertLogEvents("retrieveSettings", 1, nonExistentSegment)

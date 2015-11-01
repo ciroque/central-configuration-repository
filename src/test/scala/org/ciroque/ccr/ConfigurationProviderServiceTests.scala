@@ -119,7 +119,7 @@ class ConfigurationProviderServiceTests
 
       it("should return a 404 when the environment is not found") {
         expecting {
-          dataStore.retrieveApplications(environment).andReturn(Future.successful(DataStoreResults.NotFound(s"environment '$environment' was not found")))
+          dataStore.retrieveApplications(environment).andReturn(Future.successful(DataStoreResults.NotFound(None, s"environment '$environment' was not found")))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment") ~> routes ~> check {
@@ -157,7 +157,7 @@ class ConfigurationProviderServiceTests
       it("should return a 404 when the application is not found") {
         val notFoundMessage: String = s"application '$application' was not found"
         expecting {
-          dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
+          dataStore.retrieveScopes(environment, application).andReturn(Future.successful(DataStoreResults.NotFound(None, notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application") ~> routes ~> check {
@@ -194,7 +194,7 @@ class ConfigurationProviderServiceTests
       it("should return a 404 when the scope is not found") {
         val notFoundMessage: String = "scope '$scope' was not found"
         expecting {
-          dataStore.retrieveSettings(environment, application, scope).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
+          dataStore.retrieveSettings(environment, application, scope).andReturn(Future.successful(DataStoreResults.NotFound(None, notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(s"$settingsPath/$environment/$application/$scope") ~> routes ~> check {
@@ -248,7 +248,7 @@ class ConfigurationProviderServiceTests
       it("should return a 404 when the setting name is not found") {
         val notFoundMessage: String = s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found"
         expecting {
-          dataStore.retrieveConfiguration(environment, application, scope, setting, None).andReturn(Future.successful(DataStoreResults.NotFound(notFoundMessage)))
+          dataStore.retrieveConfiguration(environment, application, scope, setting, None).andReturn(Future.successful(DataStoreResults.NotFound(None, notFoundMessage)))
         }
         whenExecuting(dataStore) {
           Get(settingUri) ~> routes ~> check {

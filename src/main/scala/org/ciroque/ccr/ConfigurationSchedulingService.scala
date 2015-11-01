@@ -79,7 +79,7 @@ trait ConfigurationSchedulingService
     import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
     val (result: JsValue, statusCode: StatusCode) = eventualResult match {
       case Added(item: Configuration) => (ConfigurationResponse(List(item)).toJson, StatusCodes.OK)
-      case NotFound(msg) ⇒ (HyperMediaMessageResponse(msg, Map()).toJson, StatusCodes.NotFound)
+      case NotFound(item, msg) ⇒ (HyperMediaMessageResponse(msg, Map()).toJson, StatusCodes.NotFound)
       case Updated(previous: Configuration, updated: Configuration) ⇒ (ConfigurationUpdateResponse(previous, updated).toJson, StatusCodes.OK)
       case Failure(message, cause) => Commons.failureResponseFactory(message, cause)
     }

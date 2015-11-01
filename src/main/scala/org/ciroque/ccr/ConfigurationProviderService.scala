@@ -207,7 +207,7 @@ trait ConfigurationProviderService
     } yield {
       val ((jsonResult, statusCode), listOfEntities) = entities match {
         case Found(items: List[T]) => (foundFactory(items), items)
-        case NotFound(message) => (notFoundFactory(message), List())
+        case NotFound(item, message) => (notFoundFactory(message), List())
         case Failure(message, cause) => (failureFactory(message, cause), List())
         case _ => ((s"No match for entities. ${entities.toString}", StatusCodes.InternalServerError), List())
       }

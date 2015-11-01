@@ -12,7 +12,7 @@ object DataStoreResults {
 
   case class Found[T](items: Seq[T]) extends DataStoreResult
 
-  case class NotFound(message: String) extends DataStoreResult
+  case class NotFound[T](item: Option[T], message: String) extends DataStoreResult
 
   case class Updated[T](prevItem: T, newItem: T) extends DataStoreResult
 
