@@ -98,12 +98,26 @@ abstract class SettingsDataStoreTests
 
   val alternateConfigurationWithSourceId = configurationWithSourceId.copy(_id = UUID.randomUUID(), key = configurationWithSourceId.key.copy(sourceId = Some(secondSourceId)), value = JsString("SOMETHING_DIFFERENT"))
 
+  val app = "THIS"
+  val env = "IS"
+  val scp1 = "A"
+  val scp2 = "AN"
+  val scp3 = "YETANOTHER"
+  val stg = "BULK"
+  val similarOne = TestObjectGenerator.configuration(app, env, scp1, stg)
+  val similarTwo = TestObjectGenerator.configuration(app, env, scp2, stg)
+  val similarThree = TestObjectGenerator.configuration(app, env, scp3, stg)
+
   override def beforeEach(): Unit = {
     import org.ciroque.ccr.logging.CachingLogger
     logger.asInstanceOf[CachingLogger].reset()
   }
 
   override def beforeAll(): Unit = {
+    settingsDataStore.insertConfiguration(similarOne)
+    settingsDataStore.insertConfiguration(similarTwo)
+    settingsDataStore.insertConfiguration(similarThree)
+
     settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logLevelSetting, JsString("DEBUG"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
     settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logFilenameSetting, JsString("output.log"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
     settingsDataStore.insertConfiguration(ConfigurationFactory(devEnvironment, application, loggingScope, logRotationSetting, JsString("24hours"), DateTime.now().minusYears(1), DateTime.now().minusDays(7), 360000L))
@@ -144,6 +158,7 @@ abstract class SettingsDataStoreTests
 
     settingsDataStore.insertConfiguration(configurationWithSourceId)
     settingsDataStore.insertConfiguration(alternateConfigurationWithSourceId)
+
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -156,198 +171,219 @@ abstract class SettingsDataStoreTests
 
   describe("configurations") {
 
-    it("Inserts a valid configuration") {
-      whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
-        dsr => dsr should be(DataStoreResults.Added(testConfiguration))
+    describe("insert") {
+
+      it("Inserts a valid configuration") {
+        whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
+          dsr => dsr should be(DataStoreResults.Added(testConfiguration))
+        }
+
+        assertLogEvents("insertConfiguration", 1, "added-configuration")
       }
 
-      assertLogEvents("insertConfiguration", 1, "added-configuration")
-    }
+      it("Fails to insert an existing configuration") {
+        whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
+          case DataStoreResults.Errored(item, message) => message should be(Commons.DatastoreErrorMessages.DuplicateKeyError)
+          case _ => fail("should have encountered a Failure in the datastore (Duplicate Key)")
+        }
 
-    it("Fails to insert an existing configuration") {
-      whenReady(settingsDataStore.insertConfiguration(testConfiguration), Timeout(Span.Max)) {
-        case DataStoreResults.Errored(item, message) => message should be(Commons.DatastoreErrorMessages.DuplicateKeyError)
-        case _ => fail("should have encountered a Failure in the datastore (Duplicate Key)")
-      }
-
-      logger.asInstanceOf[CachingLogger].printLog()
-      assertLogEvents("insertConfiguration", 1, "added-configuration")
-    }
-
-    it("Updates an existing configuration") {
-      val modifiedConfiguration = testConfiguration.copy(
-        temporality = Temporality(
-          testConfiguration.temporality.effectiveAt,
-          testConfiguration.temporality.expiresAt,
-          5000))
-      whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
-        dsr =>
-          dsr should be(DataStoreResults.Updated(testConfiguration, modifiedConfiguration))
-      }
-
-      assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
-    }
-
-    it("fails to update a configuration that does not exist") {
-      val modifiedConfiguration = testConfiguration.copy(
-        _id = UUID.randomUUID(),
-        temporality = Temporality(
-          testConfiguration.temporality.effectiveAt,
-          testConfiguration.temporality.expiresAt,
-          5000))
-      whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
-        dsr =>
-          dsr should be(DataStoreResults.NotFound(Some(modifiedConfiguration), Commons.DatastoreErrorMessages.NotFoundError))
-      }
-
-      assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
-    }
-
-    it("Returns a single, active configuration when given a valid path") {
-      whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application3, loggingScope, logLevelSetting), Timeout(Span.Max)) {
-        case Found(config) =>
-          config match {
-            case conf: List[Configuration] =>
-              conf.size should be(1)
-              conf.head should be(activeLogLevelConfiguration)
-              conf.head.isActive should be(true)
-            case something => fail(s"Expected to get a Configuration. Got a $something instead")
-          }
-        case NotFound(Some(config), msg) => fail(s"NotFound -> $msg")
-      }
-
-      assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application3, loggingScope, logLevelSetting)
-    }
-
-    it("Returns a NotFound when the environment / application / scope / setting combination does not exist") {
-      whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) {
-        result =>
-          result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
-      }
-
-      assertLogEvents("retrieveConfiguration", 1, nonExistentSegment)
-    }
-
-    it("Returns a NotFound when there is no active configuration") {
-      whenReady(settingsDataStore.retrieveConfiguration(devEnvironment, application, loggingScope, logLevelSetting), Timeout(Span.Max)) {
-        result =>
-          result should be(DataStoreResults.NotFound(None, s"environment '$devEnvironment' / application '$application' / scope '$loggingScope' / setting '$logLevelSetting' found no active configuration"))
-      }
-
-      assertLogEvents("retrieveConfiguration", 1, devEnvironment, application, loggingScope, logLevelSetting)
-    }
-
-    it("Returns a default, if present, when no active configuration is present") {
-      whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application4, loggingScope, logRotationSetting), Timeout(Span.Max)) {
-        result =>
-          result should be(DataStoreResults.Found(Seq(defaultLogRotationConfiguration)))
-      }
-
-      assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application4, loggingScope, logRotationSetting)
-    }
-
-    it("returns a setting with leading wildcards in the environment, applications, scope, and settings segments") {
-      val leadingWildcardSearch = "*:wildcard"
-      whenReady(settingsDataStore.retrieveConfiguration(leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch), Timeout(Span.Max)) {
-        result =>
-          result should be(DataStoreResults.Found(Seq(wildcardConfiguration)))
-      }
-
-      assertLogEvents("retrieveConfiguration", 1, leadingWildcardSearch)
-    }
-
-    it("Allows inclusion of a sourceKey value in the key field") {
-      val configurationWithSourceId = ConfigurationFactory(
-        UUID.randomUUID(),
-        uniqueEnvironment,
-        "UNIQ:Application",
-        "UNIQ:Scope",
-        "UNIQ:Setting",
-        Some("UNIQ:SourceId"),
-        JsString("UNIQUE_VALUE"),
-        DateTime.now().minusDays(2),
-        DateTime.now().plusDays(2),
-        10L
-      )
-
-      whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
-        retrievedConfiguration =>
-          retrievedConfiguration should be(DataStoreResults.Added(configurationWithSourceId))
+        assertLogEvents("insertConfiguration", 1, "added-configuration")
       }
     }
 
-    it("restricts the sourceId to 64 characters") {
-      val uniqueApplication: String = "UNIQ:Application"
-      val uniqueScope: String = "UNIQ:Scope"
-      val uniqueSetting: String = "UNIQ:Setting"
-      val sourceId = "1234567890123456789012345678901234567890123456789012345678901234567890"
-      val configurationWithSourceId = ConfigurationFactory(
-        UUID.randomUUID(),
-        uniqueEnvironment,
-        uniqueApplication,
-        uniqueScope,
-        uniqueSetting,
-        Some(sourceId),
-        JsObject(Map("KEY" -> JsString("UNIQUE_VALUE"))),
-        DateTime.now().minusDays(2),
-        DateTime.now().plusDays(2),
-        10L
-      )
+    describe("update") {
 
-      val expectedSourceId = "1234567890123456789012345678901234567890123456789012345678901234"
-      val expectedKey = ConfigurationFactory.Key(uniqueEnvironment, uniqueApplication, uniqueScope, uniqueSetting, Some(expectedSourceId))
-      val expectedConfiguration = configurationWithSourceId.copy(key = expectedKey)
+      it("Updates an existing configuration") {
+        val modifiedConfiguration = testConfiguration.copy(
+          temporality = Temporality(
+            testConfiguration.temporality.effectiveAt,
+            testConfiguration.temporality.expiresAt,
+            5000))
+        whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
+          dsr =>
+            dsr should be(DataStoreResults.Updated(testConfiguration, modifiedConfiguration))
+        }
 
-      whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
-        retrievedConfiguration =>
-          retrievedConfiguration should be(DataStoreResults.Added(expectedConfiguration))
+        assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
       }
 
-      assertLogEvents("insertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
-    }
+      it("fails to update a configuration that does not exist") {
+        val modifiedConfiguration = testConfiguration.copy(
+          _id = UUID.randomUUID(),
+          temporality = Temporality(
+            testConfiguration.temporality.effectiveAt,
+            testConfiguration.temporality.expiresAt,
+            5000))
+        whenReady(settingsDataStore.updateConfiguration(modifiedConfiguration), Timeout(Span.Max)) {
+          dsr =>
+            dsr should be(DataStoreResults.NotFound(Some(modifiedConfiguration), Commons.DatastoreErrorMessages.NotFoundError))
+        }
 
-    it("allows filtering by the sourceId") {
-      whenReady(
-        settingsDataStore.retrieveConfiguration(
-          configurationWithSourceId.key.environment,
-          configurationWithSourceId.key.application,
-          configurationWithSourceId.key.scope,
-          configurationWithSourceId.key.setting,
-          Some(sourceId.toString)),
-        Timeout(Span.Max)) {
-
-        case Found(config) =>
-          config match {
-            case conf: List[Configuration] =>
-              conf.size should be(1)
-              conf.head should be(configurationWithSourceId)
-              conf.head.isActive should be(true)
-            case something => fail(s"Expected to get a Configuration. Got a $something instead.")
-          }
-        case NotFound(_, msg) => fail(s"NotFound -> $msg")
+        assertLogEvents("updateConfiguration", 1, "original-configuration", "validated-configuration")
       }
     }
 
-    it("returns all the configurations when the sourceId is not matched") {
-      whenReady(
-        settingsDataStore.retrieveConfiguration(
-          configurationWithSourceId.key.environment,
-          configurationWithSourceId.key.application,
-          configurationWithSourceId.key.scope,
-          configurationWithSourceId.key.setting,
-          Some("NOT_THERE")),
-        Timeout(Span.Max)) {
+    describe("retrieval") {
 
-        case Found(config) =>
-          config match {
-            case conf: List[Configuration] =>
-              conf.size should be(2)
-              conf.contains(configurationWithSourceId)
-              conf.contains(alternateConfigurationWithSourceId)
-            case something => fail(s"Expected to get a Configuration. Got a $something instead.")
-          }
-        case NotFound(None, msg) => fail(s"NotFound -> $msg")
+      it("Returns a single, active configuration when given a valid path") {
+        whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application3, loggingScope, logLevelSetting), Timeout(Span.Max)) {
+          case Found(config) =>
+            config match {
+              case conf: List[Configuration] =>
+                conf.size should be(1)
+                conf.head should be(activeLogLevelConfiguration)
+                conf.head.isActive should be(true)
+              case something => fail(s"Expected to get a Configuration. Got a $something instead")
+            }
+          case NotFound(Some(config), msg) => fail(s"NotFound -> $msg")
+        }
+
+        assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application3, loggingScope, logLevelSetting)
       }
+
+      it("Returns a NotFound when the environment / application / scope / setting combination does not exist") {
+        whenReady(settingsDataStore.retrieveConfiguration(nonExistentSegment, nonExistentSegment, nonExistentSegment, nonExistentSegment), Timeout(Span.Max)) {
+          result =>
+            result should be(DataStoreResults.NotFound(None, s"environment '$nonExistentSegment' / application '$nonExistentSegment' / scope '$nonExistentSegment' / setting '$nonExistentSegment' combination was not found"))
+        }
+
+        assertLogEvents("retrieveConfiguration", 1, nonExistentSegment)
+      }
+
+      it("Returns a NotFound when there is no active configuration") {
+        whenReady(settingsDataStore.retrieveConfiguration(devEnvironment, application, loggingScope, logLevelSetting), Timeout(Span.Max)) {
+          result =>
+            result should be(DataStoreResults.NotFound(None, s"environment '$devEnvironment' / application '$application' / scope '$loggingScope' / setting '$logLevelSetting' found no active configuration"))
+        }
+
+        assertLogEvents("retrieveConfiguration", 1, devEnvironment, application, loggingScope, logLevelSetting)
+      }
+
+      it("Returns a default, if present, when no active configuration is present") {
+        whenReady(settingsDataStore.retrieveConfiguration(prodEnvironment, application4, loggingScope, logRotationSetting), Timeout(Span.Max)) {
+          result =>
+            result should be(DataStoreResults.Found(Seq(defaultLogRotationConfiguration)))
+        }
+
+        assertLogEvents("retrieveConfiguration", 1, prodEnvironment, application4, loggingScope, logRotationSetting)
+      }
+
+      it("returns a setting with leading wildcards in the environment, applications, scope, and settings segments") {
+        val leadingWildcardSearch = "*:wildcard"
+        whenReady(settingsDataStore.retrieveConfiguration(leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch, leadingWildcardSearch), Timeout(Span.Max)) {
+          result =>
+            result should be(DataStoreResults.Found(Seq(wildcardConfiguration)))
+        }
+
+        assertLogEvents("retrieveConfiguration", 1, leadingWildcardSearch)
+      }
+
+      it("Allows inclusion of a sourceKey value in the key field") {
+        val configurationWithSourceId = ConfigurationFactory(
+          UUID.randomUUID(),
+          uniqueEnvironment,
+          "UNIQ:Application",
+          "UNIQ:Scope",
+          "UNIQ:Setting",
+          Some("UNIQ:SourceId"),
+          JsString("UNIQUE_VALUE"),
+          DateTime.now().minusDays(2),
+          DateTime.now().plusDays(2),
+          10L
+        )
+
+        whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+          retrievedConfiguration =>
+            retrievedConfiguration should be(DataStoreResults.Added(configurationWithSourceId))
+        }
+      }
+
+      it("restricts the sourceId to 64 characters") {
+        val uniqueApplication: String = "UNIQ:Application"
+        val uniqueScope: String = "UNIQ:Scope"
+        val uniqueSetting: String = "UNIQ:Setting"
+        val sourceId = "1234567890123456789012345678901234567890123456789012345678901234567890"
+        val configurationWithSourceId = ConfigurationFactory(
+          UUID.randomUUID(),
+          uniqueEnvironment,
+          uniqueApplication,
+          uniqueScope,
+          uniqueSetting,
+          Some(sourceId),
+          JsObject(Map("KEY" -> JsString("UNIQUE_VALUE"))),
+          DateTime.now().minusDays(2),
+          DateTime.now().plusDays(2),
+          10L
+        )
+
+        val expectedSourceId = "1234567890123456789012345678901234567890123456789012345678901234"
+        val expectedKey = ConfigurationFactory.Key(uniqueEnvironment, uniqueApplication, uniqueScope, uniqueSetting, Some(expectedSourceId))
+        val expectedConfiguration = configurationWithSourceId.copy(key = expectedKey)
+
+        whenReady(settingsDataStore.insertConfiguration(configurationWithSourceId), Timeout(Span.Max)) {
+          retrievedConfiguration =>
+            retrievedConfiguration should be(DataStoreResults.Added(expectedConfiguration))
+        }
+
+        assertLogEvents("insertConfiguration", 1, "given-configuration", "added-configuration", sourceId, expectedSourceId)
+      }
+
+      it("allows filtering by the sourceId") {
+        whenReady(
+          settingsDataStore.retrieveConfiguration(
+            configurationWithSourceId.key.environment,
+            configurationWithSourceId.key.application,
+            configurationWithSourceId.key.scope,
+            configurationWithSourceId.key.setting,
+            Some(sourceId.toString)),
+          Timeout(Span.Max)) {
+
+          case Found(config) =>
+            config match {
+              case conf: List[Configuration] =>
+                conf.size should be(1)
+                conf.head should be(configurationWithSourceId)
+                conf.head.isActive should be(true)
+              case something => fail(s"Expected to get a Configuration. Got a $something instead.")
+            }
+          case NotFound(_, msg) => fail(s"NotFound -> $msg")
+        }
+      }
+
+      it("returns all the configurations when the sourceId is not matched") {
+        whenReady(
+          settingsDataStore.retrieveConfiguration(
+            configurationWithSourceId.key.environment,
+            configurationWithSourceId.key.application,
+            configurationWithSourceId.key.scope,
+            configurationWithSourceId.key.setting,
+            Some("NOT_THERE")),
+          Timeout(Span.Max)) {
+
+          case Found(config) =>
+            config match {
+              case conf: List[Configuration] =>
+                conf.size should be(2)
+                conf.contains(configurationWithSourceId)
+                conf.contains(alternateConfigurationWithSourceId)
+              case something => fail(s"Expected to get a Configuration. Got a $something instead.")
+            }
+          case NotFound(None, msg) => fail(s"NotFound -> $msg")
+        }
+      }
+
+      it("does not use wildcards inappropriately") {
+        whenReady(settingsDataStore.retrieveConfiguration(app, env, scp1, stg), Timeout(Span.Max)) {
+          case Found(configurations) ⇒
+            val configurationList = configurations.asInstanceOf[List[Configuration]]
+            configurationList.size should be(1)
+          case NotFound(None, msg) ⇒ fail(s"NotFound -> $msg")
+        }
+      }
+    }
+
+    describe("delete") {
+
     }
 
     describe("Bulk Operations") {
@@ -355,8 +391,8 @@ abstract class SettingsDataStoreTests
       val originalConfigurations = (for {
         i <- 1 to 10
       } yield {
-        TestObjectGenerator.configuration()
-      }).toList
+          TestObjectGenerator.configuration()
+        }).toList
 
       val modifiedConfigurations = originalConfigurations map { configuration => configuration.copy(value = TestObjectGenerator.randomJsString()) }
       val nonExistentConfigurations = originalConfigurations map { configuration => configuration.copy(_id = UUID.randomUUID(), value = JsString("NONEXISTENT")) }
@@ -447,7 +483,7 @@ abstract class SettingsDataStoreTests
         .sortBy(s => s)
       whenReady(settingsDataStore.retrieveEnvironments(), Timeout(Span.Max)) {
         case Found(environments) =>
-          expectedEnvironments map { environment => environments should contain(environment)}
+          expectedEnvironments map { environment => environments should contain(environment) }
       }
 
       assertLogEvents("retrieveEnvironments", 1)

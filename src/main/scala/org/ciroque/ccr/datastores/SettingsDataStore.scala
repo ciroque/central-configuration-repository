@@ -11,6 +11,8 @@ import scala.concurrent.Future
 abstract class SettingsDataStore(implicit private val logger: Logger) extends CcrTypes {
   final val SOURCE_ID_MAX_LENGTH = 64
 
+  def deleteConfiguration(configuration: Configuration): Future[DataStoreResult]
+
   def updateConfiguration(configuration: Configuration): Future[DataStoreResult]
 
   def insertConfiguration(configuration: Configuration): Future[DataStoreResult]
@@ -46,12 +48,12 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
   }
 
   protected def checkWildcards(input: String) = {
-    if (input.indexOf(".*") > -1)
+    if (input.contains(".*"))
       input.r
-    else if (input.indexOf("*") > -1)
+    else if (input.contains("*"))
       input.replace("*", ".*").r
     else
-      input.r
+       s"^$input$$".r
   }
 
   protected def filterBySourceId(list: List[Configuration], sourceId: Option[String]): List[Configuration] = {

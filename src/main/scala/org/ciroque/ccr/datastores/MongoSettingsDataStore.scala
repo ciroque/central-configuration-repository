@@ -8,7 +8,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.{MongoClient, MongoCollection}
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.datastores.DataStoreResults.{Deleted, DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration}
@@ -32,6 +32,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   import spray.json.JsValue
 
   val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
+
+  override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 
   override def insertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
     val validatedConfiguration = configuration.copy(key = validateKey(configuration.key))

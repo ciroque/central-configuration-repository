@@ -17,9 +17,9 @@
     </appender>
 
     <logger name="akka" level="INFO" />
-    <logger name="org.ciroque.ccr*" level="INFO" />
+    <logger name="org.ciroque.ccr" level="ALL" />
 
-    <root level="DEBUG">
+    <root level="WARN">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>

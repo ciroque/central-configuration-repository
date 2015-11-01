@@ -3,7 +3,7 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.datastores.DataStoreResults.{Deleted, DataStoreResult, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration}
@@ -172,4 +172,6 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       Future.successful(result)
     }
   }
+
+  override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 }

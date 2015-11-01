@@ -25,8 +25,6 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       firstEvent should include("Value1")
       firstEvent should include("TheValueOfOne")
       firstEvent should include("SUCCESS")
-
-      mockLogger.printLog()
     }
 
     it("writes an info message to the logger with Error result") {
@@ -49,8 +47,6 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       firstEvent should include("TheValueOfOne")
       firstEvent should include("ERROR")
       firstEvent should include("ERROR_MESSAGE")
-
-      mockLogger.printLog()
     }
 
     it("writes an info message to the logger with Exception result") {
@@ -77,8 +73,6 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       firstEvent should include("TheValueOfOne")
       firstEvent should include("EXCEPTION")
       firstEvent should include("AN_EXCEPTION_MESSAGE")
-
-      mockLogger.printLog()
     }
   }
 }
