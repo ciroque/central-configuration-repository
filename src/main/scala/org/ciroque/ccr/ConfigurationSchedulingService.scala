@@ -28,7 +28,7 @@ trait ConfigurationSchedulingService
 
   override def getVersion = new SemanticVersion(1, 0, 0)
 
-  def routes = configurationSchedulingRoute
+  def routes = configurationSchedulingRoute ~ configurationSchedulingRetrievalRoute
 
   def configurationSchedulingRoute = pathPrefix(Commons.rootPath / Commons.schedulingSegment) {
     pathEndOrSingleSlash {
@@ -49,29 +49,46 @@ trait ConfigurationSchedulingService
             }
           }
         } ~
-        entity(as[ConfigurationFactory.Configuration]) { configuration ⇒
-          put { context ⇒
-            withImplicitLogging("ConfigurationSchedulingService::configurationSchedulingRoute::PUT") {
-              for {
-                eventualResult ← dataStore.updateConfiguration(configuration)
-              } yield {
-                val (result: JsValue, statusCode: StatusCode) = processDataStoreResult(eventualResult)
-                context.complete(HttpResponse(
-                  statusCode,
-                  HttpEntity(`application/json`, result.toString()),
-                  Commons.corsHeaders))
+          entity(as[ConfigurationFactory.Configuration]) { configuration ⇒
+            put { context ⇒
+              withImplicitLogging("ConfigurationSchedulingService::configurationSchedulingRoute::PUT") {
+                for {
+                  eventualResult ← dataStore.updateConfiguration(configuration)
+                } yield {
+                  val (result: JsValue, statusCode: StatusCode) = processDataStoreResult(eventualResult)
+                  context.complete(HttpResponse(
+                    statusCode,
+                    HttpEntity(`application/json`, result.toString()),
+                    Commons.corsHeaders))
+                }
               }
             }
+          } ~
+          options { context ⇒
+            withImplicitLogging("ConfigurationSchedulingService::settingUpsertRoute::OPTIONS") {
+              context.complete(HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, "[]"), Commons.corsHeaders))
+            }
           }
-        } ~
-        options { context ⇒
-          withImplicitLogging("ConfigurationSchedulingService::settingUpsertRoute::OPTIONS") {
-            context.complete(HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, "[]"), Commons.corsHeaders))
-          }
-        }
       }
     }
   }
+
+  def configurationSchedulingRetrievalRoute =
+    pathPrefix(Commons.rootPath / Commons.schedulingSegment / Segment / Segment / Segment / Segment) {
+      (environment, application, scope, setting) ⇒
+        pathEndOrSingleSlash {
+          get { context ⇒
+            val thestuff = dataStore.retrieveConfigurationSchedule(environment, application, scope, setting, None)
+            for {
+              eventualResult ← thestuff
+            } yield {
+              context.complete(
+                HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, ""))
+              )
+            }
+          }
+        }
+    }
 
   def processDataStoreResult(eventualResult: DataStoreResult): (JsValue, StatusCode) = {
     import org.ciroque.ccr.responses.ConfigurationResponseProtocol._

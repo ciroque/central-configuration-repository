@@ -48,4 +48,25 @@ object TestObjectGenerator {
     randomInt
     )
   }
+
+  def configuration(
+                     environment: String,
+                     application: String,
+                     scope: String,
+                     setting: String,
+                     effectiveAt: DateTime,
+                     expiresAt: DateTime): Configuration = {
+    ConfigurationFactory(
+      UUID.randomUUID(),
+      environment,
+    application,
+    scope,
+    setting,
+    None,
+    randomJsString(),
+    effectiveAt,
+    expiresAt,
+    randomInt
+    )
+  }
 }

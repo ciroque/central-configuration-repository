@@ -3,6 +3,7 @@ package org.ciroque.ccr
 import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.helpers.TestObjectGenerator
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory._
@@ -24,6 +25,8 @@ class ConfigurationSchedulingServiceTests
   with Matchers
   with BeforeAndAfterEach
   with EasyMockSugar {
+
+
   describe("ConfigurationSchedulingService") {
     import spray.json.JsString
 
@@ -115,6 +118,59 @@ class ConfigurationSchedulingServiceTests
             import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
             val hypermediaMessageResponse = responseAs[HyperMediaMessageResponse]
             hypermediaMessageResponse.message should be(Commons.DatastoreErrorMessages.NotFoundError)
+          }
+        }
+      }
+    }
+
+    describe("schedule retrieval") {
+
+      val now = DateTime.now
+      val pastEffective = now.minusYears(1)
+      val pastExpires = now.minusWeeks(1)
+
+      val currentEffective = now.minusWeeks(1).plusSeconds(1)
+      val currentExpires = now.plusMonths(1)
+
+      val futureEffective = now.plusMonths(1).plusSeconds(1)
+      val futureExpires = now.plusYears(1)
+
+      val scheduledConfigurations = List(
+        TestObjectGenerator.configuration(
+          testEnvironment,
+          testApplication,
+          testScope,
+          testSetting,
+          pastEffective,
+          pastExpires
+        ),
+        TestObjectGenerator.configuration(
+          testEnvironment,
+          testApplication,
+          testScope,
+          testSetting,
+          currentEffective,
+          currentExpires
+        ),
+        TestObjectGenerator.configuration(
+          testEnvironment,
+          testApplication,
+          testScope,
+          testSetting,
+          futureEffective,
+          futureExpires
+        )
+      )
+
+      it("retrieves the full set of configurations for a given setting") {
+        expecting {
+          dataStore
+            .retrieveConfigurationSchedule(testEnvironment, testApplication, testScope, testSetting, None)
+            .andReturn(Future.successful(DataStoreResults.Found(scheduledConfigurations)))
+        }
+        whenExecuting(dataStore) {
+          Get(s"/${Commons.rootPath}/${Commons.schedulingSegment}/$testEnvironment/$testApplication/$testScope/$testSetting") ~> routes ~> check {
+            status should be(StatusCodes.OK)
           }
         }
       }

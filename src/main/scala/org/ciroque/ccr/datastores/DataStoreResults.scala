@@ -17,5 +17,4 @@ object DataStoreResults {
   case class NotFound[T](item: Option[T], message: String) extends DataStoreResult
 
   case class Updated[T](prevItem: T, newItem: T) extends DataStoreResult
-
 }
