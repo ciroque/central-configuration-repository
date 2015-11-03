@@ -124,7 +124,6 @@ class ConfigurationSchedulingServiceTests
     }
 
     describe("schedule retrieval") {
-
       val now = DateTime.now
       val pastEffective = now.minusYears(1)
       val pastExpires = now.minusWeeks(1)
@@ -163,6 +162,7 @@ class ConfigurationSchedulingServiceTests
       )
 
       it("retrieves the full set of configurations for a given setting") {
+        import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
         expecting {
           dataStore
             .retrieveConfigurationSchedule(testEnvironment, testApplication, testScope, testSetting, None)
@@ -171,6 +171,8 @@ class ConfigurationSchedulingServiceTests
         whenExecuting(dataStore) {
           Get(s"/${Commons.rootPath}/${Commons.schedulingSegment}/$testEnvironment/$testApplication/$testScope/$testSetting") ~> routes ~> check {
             status should be(StatusCodes.OK)
+            val configurationResponse = responseAs[ConfigurationResponse]
+            configurationResponse.configuration.length should be(scheduledConfigurations.length)
           }
         }
       }

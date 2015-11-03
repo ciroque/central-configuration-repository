@@ -274,7 +274,6 @@ trait ConfigurationProviderService
               configurations match {
                 case Nil => Commons.corsHeaders
                 case _ =>
-
                   val maxAgeHeader = `Cache-Control`(`max-age`(configurations.head.temporality.ttl))
                   val expiry = DateTime.now(DateTimeZone.UTC).plusSeconds(configurations.head.temporality.ttl.toInt)
                   val expiry1123 = Commons.DateTimeFormatter1123.print(expiry)
@@ -301,5 +300,5 @@ trait ConfigurationProviderService
   }
 
   private def hyperMediaResponseFactory(message: String): (JsValue, StatusCode) =
-    (new HyperMediaMessageResponse(message, Map()).toJson, StatusCodes.NotFound)
+    (HyperMediaMessageResponse(message).toJson, StatusCodes.NotFound)
 }

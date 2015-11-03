@@ -78,13 +78,20 @@ trait ConfigurationSchedulingService
       (environment, application, scope, setting) ⇒
         pathEndOrSingleSlash {
           get { context ⇒
-            val thestuff = dataStore.retrieveConfigurationSchedule(environment, application, scope, setting, None)
-            for {
-              eventualResult ← thestuff
-            } yield {
-              context.complete(
-                HttpResponse(StatusCodes.OK, HttpEntity(`application/json`, ""))
-              )
+            withImplicitLogging("ConfigurationSchedulingService::configurationSchedulingRetrievalRoute") {
+              import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
+              import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
+              for {
+                eventualResult ← dataStore.retrieveConfigurationSchedule(environment, application, scope, setting, None)
+              } yield {
+                val (statusCode, body) = eventualResult match {
+                  case Found(schedule: List[Configuration]) ⇒ (StatusCodes.OK, ConfigurationResponse(schedule).toJson)
+                  case NotFound(item, message) ⇒ (StatusCodes.NotFound, HyperMediaMessageResponse(message).toJson)
+                }
+                context.complete(
+                  HttpResponse(statusCode, HttpEntity(`application/json`, body.toString()))
+                )
+              }
             }
           }
         }
