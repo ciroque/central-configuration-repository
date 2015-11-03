@@ -5,13 +5,22 @@ import org.ciroque.ccr.datastores.{DataStoreConfig, DataStoreParams}
 
 object ConfigFactory {
   val enginePathPrefix = "ccr.engines"
-  val dataStorageClassPath = enginePathPrefix + ".datastore.class"
-  val dataStorageParamsPath = enginePathPrefix + ".datastore.params"
+  val dataStoreKey = "dataStore"
+  val dataStorageClassPath = s"$enginePathPrefix.$dataStoreKey.class"
+  val auditDataStoreKey = "auditDataStore"
+  val auditDataStorageClassPath = s"$enginePathPrefix.$auditDataStoreKey.class"
 
-  def load(filename: String): DataStoreConfig = {
+  def getPrimaryDataStoreConfig(filename: String): DataStoreConfig = {
     val tsconfig = TSConfigFactory.load(filename)
     val clazz = getClazz(tsconfig)
-    val params = getParams(tsconfig)
+    val params = getParams(tsconfig, dataStoreKey)
+    DataStoreConfig(clazz, params)
+  }
+
+  def getAuditDataStoreConfig(filename: String): DataStoreConfig = {
+    val tsconfig = TSConfigFactory.load(filename)
+    val clazz = getClazz(tsconfig)
+    val params = getParams(tsconfig, auditDataStoreKey)
     DataStoreConfig(clazz, params)
   }
 
@@ -22,10 +31,9 @@ object ConfigFactory {
     }
   }
 
-  private def getParams(config: Config): DataStoreParams = {
+  private def getParams(config: Config, dataStoreKey: String): DataStoreParams = {
     val ccrKey = "ccr"
     val enginesKey = "engines"
-    val datastoreKey = "datastore"
     val paramsKey = "params"
 
     val hostnameKey = "hostname"
@@ -44,8 +52,8 @@ object ConfigFactory {
         val ccrConfig = config.getConfig(ccrKey)
         if (ccrConfig.hasPath(enginesKey)) {
           val enginesConfig = ccrConfig.getConfig(enginesKey)
-          if (enginesConfig.hasPath(datastoreKey)) {
-            val datastoreConfig = enginesConfig.getConfig(datastoreKey)
+          if (enginesConfig.hasPath(dataStoreKey)) {
+            val datastoreConfig = enginesConfig.getConfig(dataStoreKey)
             if (datastoreConfig.hasPath(paramsKey)) {
               Some(datastoreConfig.getConfig(paramsKey))
             } else

@@ -27,7 +27,7 @@ class EngineFactoryTests extends FunSpec with Matchers {
   }
 
   private def buildStorageInstance(filename: String): SettingsDataStore = {
-    val config = ConfigFactory.load(filename)
+    val config = ConfigFactory.getPrimaryDataStoreConfig(filename)
     EngineFactory.buildStorageInstance(config)
   }
 }

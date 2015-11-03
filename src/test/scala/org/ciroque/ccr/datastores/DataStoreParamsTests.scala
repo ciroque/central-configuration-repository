@@ -8,10 +8,10 @@ class DataStoreParamsTests
   with Matchers {
 
   describe("DataStoreParams") {
-    val datastoreParamsPath: String = "ccr.engines.datastore.params"
+    val datastoreParamsPath: String = "ccr.engines.dataStore.params"
 
     it("successfully parses a properly formatted config file") {
-      val config = ConfigFactory.load("MongoSettingsDataStore-valid.conf")
+      val config = ConfigFactory.getPrimaryDataStoreConfig("MongoSettingsDataStore-valid.conf")
 
       config.clazz shouldEqual Some("MongoSettingsDataStore")
       config.params.hostname shouldEqual "localhost"
@@ -21,7 +21,7 @@ class DataStoreParamsTests
     }
 
     it("applies default hostname and database names when not present in configuration") {
-      val config = ConfigFactory.load("SettingsDataStore-MissingHostnamePortAndDatabase.conf")
+      val config = ConfigFactory.getPrimaryDataStoreConfig("SettingsDataStore-MissingHostnamePortAndDatabase.conf")
 
       config.params.hostname shouldEqual "localhost"
       config.params.port shouldEqual None
@@ -30,7 +30,7 @@ class DataStoreParamsTests
     }
 
     it("applies default values when the config is empty") {
-      val config = ConfigFactory.load("NoDataStoreEntries.conf")
+      val config = ConfigFactory.getPrimaryDataStoreConfig("NoDataStoreEntries.conf")
 
       config.params.hostname shouldEqual "localhost"
       config.params.port shouldEqual None

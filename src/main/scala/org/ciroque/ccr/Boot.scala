@@ -16,7 +16,7 @@ object Boot extends App {
 
   implicit val system = ActorSystem(Commons.KeyStrings.ActorSystemName)
   implicit val timeout = Timeout(5.seconds)
-  val config = ConfigFactory.load("application.conf")
+  val config = ConfigFactory.getPrimaryDataStoreConfig("application.conf")
   private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
   private val dataStore = EngineFactory.buildStorageInstance(config)
   private val accessStatsClient = new RedisAccessStatsClient()
