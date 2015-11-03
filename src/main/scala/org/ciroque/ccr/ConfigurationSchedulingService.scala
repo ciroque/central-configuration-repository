@@ -82,7 +82,7 @@ trait ConfigurationSchedulingService
               import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
               import org.ciroque.ccr.responses.HyperMediaResponseProtocol._
               for {
-                eventualResult ← dataStore.retrieveConfigurationSchedule(environment, application, scope, setting, None)
+                eventualResult ← dataStore.retrieveConfigurationSchedule(environment, application, scope, setting)
               } yield {
                 val (statusCode, body) = eventualResult match {
                   case Found(schedule: List[Configuration]) ⇒ (StatusCodes.OK, ConfigurationResponse(schedule).toJson)

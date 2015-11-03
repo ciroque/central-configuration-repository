@@ -3,10 +3,10 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{Deleted, DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Deleted, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration}
+import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.slf4j.Logger
 
 import scala.concurrent.Future
@@ -138,6 +138,22 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     }
   }
 
+  private def getConfigurations(environment: String, application: String, scope: String, setting: String): List[Configuration] ={
+    val environmentRegex = checkWildcards(environment)
+    val applicationRegex = checkWildcards(application)
+    val scopeRegex = checkWildcards(scope)
+    val settingRegex = checkWildcards(setting)
+
+    val configs = applyFilter(
+      conf =>
+        (environmentRegex.findFirstIn(conf.key.environment).isDefined || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
+          && applicationRegex.findFirstIn(conf.key.application).isDefined
+          && scopeRegex.findFirstIn(conf.key.scope).isDefined
+          && settingRegex.findFirstIn(conf.key.setting).isDefined
+    )
+    configs
+  }
+
   override def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult] = {
     withImplicitLogging("InMemorySettingsDataStore.retrieveConfiguration") {
       import org.ciroque.ccr.core.Commons
@@ -146,18 +162,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
       recordValue(Commons.KeyStrings.ScopeKey, scope)
       recordValue(Commons.KeyStrings.SettingKey, setting)
 
-      val environmentRegex = checkWildcards(environment)
-      val applicationRegex = checkWildcards(application)
-      val scopeRegex = checkWildcards(scope)
-      val settingRegex = checkWildcards(setting)
-
-      val configs = applyFilter(
-        conf =>
-          (environmentRegex.findFirstIn(conf.key.environment).isDefined || conf.key.environment == ConfigurationFactory.DefaultEnvironment)
-            && applicationRegex.findFirstIn(conf.key.application).isDefined
-            && scopeRegex.findFirstIn(conf.key.scope).isDefined
-            && settingRegex.findFirstIn(conf.key.setting).isDefined
-      )
+      val configs = getConfigurations(environment, application, scope, setting)
 
       def findActives = configs.filter(_.isActive)
 
@@ -174,4 +179,14 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
   }
 
   override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
+
+  override def retrieveConfigurationSchedule(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
+    import org.ciroque.ccr.core.Commons.Joda._
+    val dataStoreResult = getConfigurations(environment, application, scope, setting) match {
+      case Nil => NotFound(None, s"${Commons.KeyStrings.EnvironmentKey} '$environment' / ${Commons.KeyStrings.ApplicationKey} '$application' / ${Commons.KeyStrings.ScopeKey} '$scope' / ${Commons.KeyStrings.SettingKey} '$setting' combination was not found")
+      case list => Found(list.sortBy(c => c.temporality.effectiveAt))
+    }
+
+    Future.successful(dataStoreResult)
+  }
 }

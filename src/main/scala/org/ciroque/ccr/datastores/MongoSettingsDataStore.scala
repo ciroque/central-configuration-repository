@@ -2,22 +2,21 @@ package org.ciroque.ccr.datastores
 
 import java.util.UUID
 
-import com.mongodb._
-import com.mongodb.casbah.Implicits._
+import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.{MongoClient, MongoCollection}
+import com.mongodb.{BasicDBObject, DBObject}
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{Deleted, DataStoreResult, Found, NotFound}
+import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Deleted, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration}
+import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.joda.time.DateTime
 import org.slf4j.Logger
 import spray.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.concurrent.Future
 
 object MongoSettingsDataStore {
@@ -140,37 +139,62 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue(Commons.KeyStrings.SettingKey, setting)
       recordValue(Commons.KeyStrings.SourceIdKey, sourceId.toString)
 
-      executeInCollection { collection =>
-        import com.mongodb.casbah.Imports._
-        val environmentQuery = checkWildcards(environment)
-        val applicationQuery = checkWildcards(application)
-        val scopeQuery = checkWildcards(scope)
-        val settingQuery = checkWildcards(setting)
-        val configurationQuery = $or(("key.environment" $eq environmentQuery) :: ("key.environment" $eq ConfigurationFactory.DefaultEnvironment)) ++
-          $and("key.application" $eq applicationQuery, "key.scope" $eq scopeQuery, "key.setting" $eq settingQuery)
-        val dbResult = collection.find(configurationQuery).toList
-        dbResult match {
-          case Nil => DataStoreResults.NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
-          case list => list.map(fromMongoDbObject).filter(_.isActive) match {
-            case Nil => NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
-            case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
+      queryConfigurations(environment, application, scope, setting) flatMap {
+        configurations =>
+          val dataStoreResult = configurations match {
+            case Nil => NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
+            case list => list.filter(_.isActive) match {
+              case Nil  => NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' found no active configuration")
+              case found: Seq[Configuration] => Found(filterBySourceId(found, sourceId))
+            }
           }
-        }
+
+          Future.successful(dataStoreResult)
       }
     }
   }
 
-  private def executeInCollection(fx: (MongoCollection) => DataStoreResult): Future[DataStoreResult] = {
-    val collection = client(settings.database)(settings.catalog)
+  override def retrieveConfigurationSchedule(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult] = {
+    import org.ciroque.ccr.models.ConfigurationFactory.ConfigurationOrdering._
+    withImplicitLogging("MongoSettingsDataStore.retrieveConfigurationSchedule") {
+      recordValue(Commons.KeyStrings.EnvironmentKey, environment)
+      recordValue(Commons.KeyStrings.ApplicationKey, application)
+      recordValue(Commons.KeyStrings.ScopeKey, scope)
+      recordValue(Commons.KeyStrings.SettingKey, setting)
 
-    def getMongoExceptionMessage(ex: Throwable): String = {
-      ex match {
-        case dk: DuplicateKeyException => Commons.DatastoreErrorMessages.DuplicateKeyError
-        case _ => ex.getClass.toString
+      queryConfigurations(environment, application, scope, setting) flatMap {
+        configurations =>
+          val dataStoreResult = configurations match {
+            case Nil => NotFound(None, s"environment '$environment' / application '$application' / scope '$scope' / setting '$setting' combination was not found")
+            case list => Found(list.sortBy(c => c))
+            }
+
+          Future.successful(dataStoreResult)
+        }
+      }
+  }
+
+  private def queryConfigurations(environment: String, application: String, scope: String, setting: String): Future[List[Configuration]] = {
+    val configurationQuery = buildConfigurationQuery(environment, application, scope, setting)
+    executeInCollection { collection =>
+      collection.find(configurationQuery).toList match {
+        case Nil => Nil
+        case list => list.map(fromMongoDbObject)
       }
     }
+  }
 
-    Future { fx(collection) }
+  private def buildConfigurationQuery(environment: String, application: String, scope: String, setting: String) = {
+    val environmentQuery = checkWildcards(environment)
+    val applicationQuery = checkWildcards(application)
+    val scopeQuery = checkWildcards(scope)
+    val settingQuery = checkWildcards(setting)
+    val assQuery = $and("key.application" $eq applicationQuery, "key.scope" $eq scopeQuery, "key.setting" $eq settingQuery)
+    $or(("key.environment" $eq environmentQuery) :: ("key.environment" $eq ConfigurationFactory.DefaultEnvironment)) ++ assQuery
+  }
+
+  private def executeInCollection[T](fx: (MongoCollection) => T): Future[T] = {
+    Future { fx(client(settings.database)(settings.catalog)) }
   }
 
   private def toMongoDbObject(configuration: Configuration) = {

@@ -27,9 +27,7 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
 
   def retrieveConfiguration(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult]
 
-  def retrieveConfigurationSchedule(environment: String, application: String, scope: String, setting: String, sourceId: Option[String] = None): Future[DataStoreResult] = {
-    Future.failed(new NotImplementedError())
-  }
+  def retrieveConfigurationSchedule(environment: String, application: String, scope: String, setting: String): Future[DataStoreResult]
 
   def bulkInsertConfigurations(configurationList: ConfigurationList): Future[List[DataStoreResult]] = {
     val listOfFutures = for {

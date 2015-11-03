@@ -3,10 +3,8 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores
 import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.helpers.TestObjectGenerator
-import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory._
 import org.joda.time.DateTime
@@ -103,10 +101,26 @@ abstract class SettingsDataStoreTests
   val scp1 = "A"
   val scp2 = "AN"
   val scp3 = "YETANOTHER"
+  val scpSched = "SCHEDULED"
   val stg = "BULK"
   val similarOne = TestObjectGenerator.configuration(app, env, scp1, stg)
   val similarTwo = TestObjectGenerator.configuration(app, env, scp2, stg)
   val similarThree = TestObjectGenerator.configuration(app, env, scp3, stg)
+
+  val now = DateTime.now
+  val pastEffective = now.minusYears(1)
+  val pastExpires = now.minusWeeks(1)
+
+  val currentEffective = now.minusWeeks(1).plusSeconds(1)
+  val currentExpires = now.plusMonths(1)
+
+  val futureEffective = now.plusMonths(1).plusSeconds(1)
+  val futureExpires = now.plusYears(1)
+
+  val scheduled1 = TestObjectGenerator.configuration(app, env, scpSched, stg, futureEffective, futureExpires)
+  val scheduled2 = TestObjectGenerator.configuration(app, env, scpSched, stg, pastEffective, pastExpires)
+  val scheduled3 = TestObjectGenerator.configuration(app, env, scpSched, stg, currentEffective, currentExpires)
+  val scheduled4 = TestObjectGenerator.configuration(ConfigurationFactory.DefaultEnvironment, env, scpSched, stg, pastEffective, futureExpires)
 
   override def beforeEach(): Unit = {
     import org.ciroque.ccr.logging.CachingLogger
@@ -159,6 +173,7 @@ abstract class SettingsDataStoreTests
     settingsDataStore.insertConfiguration(configurationWithSourceId)
     settingsDataStore.insertConfiguration(alternateConfigurationWithSourceId)
 
+    settingsDataStore.bulkInsertConfigurations(ConfigurationList(List(scheduled1, scheduled2, scheduled3, scheduled4)))
   }
 
   private def assertLogEvents(name: String, count: Int, shouldInclude: String*) = {
@@ -378,6 +393,21 @@ abstract class SettingsDataStoreTests
             val configurationList = configurations.asInstanceOf[List[Configuration]]
             configurationList.size should be(1)
           case NotFound(None, msg) ⇒ fail(s"NotFound -> $msg")
+        }
+      }
+
+      it("loads the configuration schedule in ascending effectiveAt order") {
+        whenReady(settingsDataStore.retrieveConfigurationSchedule(app, env, scpSched, stg)) {
+          case Found(configurations) =>
+            val configurationList = configurations.asInstanceOf[List[Configuration]]
+            configurationList.size should be(4)
+
+            println(s"${configurationList.toJson.prettyPrint}")
+
+            configurationList.apply(0) should be(scheduled1)
+            configurationList.apply(1) should be(scheduled3)
+            configurationList.apply(2) should be(scheduled2)
+            configurationList.apply(3) should be(scheduled4)
         }
       }
     }

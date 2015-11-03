@@ -165,7 +165,7 @@ class ConfigurationSchedulingServiceTests
         import org.ciroque.ccr.responses.ConfigurationResponseProtocol._
         expecting {
           dataStore
-            .retrieveConfigurationSchedule(testEnvironment, testApplication, testScope, testSetting, None)
+            .retrieveConfigurationSchedule(testEnvironment, testApplication, testScope, testSetting)
             .andReturn(Future.successful(DataStoreResults.Found(scheduledConfigurations)))
         }
         whenExecuting(dataStore) {

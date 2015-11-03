@@ -1,11 +1,16 @@
 package org.ciroque.ccr.core
 
 import org.ciroque.ccr.responses.InternalServerErrorResponse
+import org.joda.time.DateTime
 import spray.http.HttpHeaders.RawHeader
 import spray.http.{StatusCode, StatusCodes}
 import spray.json._
 
 object Commons {
+
+  object Joda {
+    implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isAfter _)
+  }
 
   import java.util.Locale
 

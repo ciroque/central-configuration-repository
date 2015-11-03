@@ -49,8 +49,7 @@ object TestObjectGenerator {
     )
   }
 
-  def configuration(
-                     environment: String,
+  def configuration(environment: String,
                      application: String,
                      scope: String,
                      setting: String,

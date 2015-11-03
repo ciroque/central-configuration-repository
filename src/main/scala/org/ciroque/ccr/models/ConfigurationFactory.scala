@@ -17,6 +17,12 @@ object ConfigurationFactory extends DefaultJsonProtocol {
     }
   }
 
+  object ConfigurationOrdering {
+    implicit def ascending: Ordering[Configuration] = Ordering.fromLessThan(
+      (l,r) => (l.temporality.effectiveAt isAfter r.temporality.effectiveAt) && l.key.environment != DefaultEnvironment
+    )
+  }
+
   val DefaultEnvironment = "default"
 
   implicit val KeyResponseFormat = jsonFormat5(Key.apply)
