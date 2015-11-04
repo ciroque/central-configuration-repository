@@ -10,17 +10,10 @@ object ConfigFactory {
   val auditDataStoreKey = "auditDataStore"
   val auditDataStorageClassPath = s"$enginePathPrefix.$auditDataStoreKey.class"
 
-  def getPrimaryDataStoreConfig(filename: String): DataStoreConfig = {
+  def getPrimaryDataStoreConfig(filename: String = Commons.defaultConfigurationFile): DataStoreConfig = {
     val tsconfig = TSConfigFactory.load(filename)
     val clazz = getClazz(tsconfig)
     val params = getParams(tsconfig, dataStoreKey)
-    DataStoreConfig(clazz, params)
-  }
-
-  def getAuditDataStoreConfig(filename: String): DataStoreConfig = {
-    val tsconfig = TSConfigFactory.load(filename)
-    val clazz = getClazz(tsconfig)
-    val params = getParams(tsconfig, auditDataStoreKey)
     DataStoreConfig(clazz, params)
   }
 

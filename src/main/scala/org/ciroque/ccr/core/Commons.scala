@@ -8,6 +8,8 @@ import spray.json._
 
 object Commons {
 
+  final val defaultConfigurationFile = "application.conf"
+
   object Joda {
     implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isAfter _)
   }

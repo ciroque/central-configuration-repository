@@ -12,13 +12,10 @@ import scala.concurrent.duration._
 
 object Boot extends App {
 
-  import org.slf4j.{Logger, LoggerFactory}
-
   implicit val system = ActorSystem(Commons.KeyStrings.ActorSystemName)
   implicit val timeout = Timeout(5.seconds)
-  val config = ConfigFactory.getPrimaryDataStoreConfig("application.conf")
-  private val logger: Logger = LoggerFactory.getLogger(Commons.KeyStrings.ActorSystemName)
-  private val dataStore = EngineFactory.buildStorageInstance(config)
+  val primaryDataStoreConfig = ConfigFactory.getPrimaryDataStoreConfig(Commons.defaultConfigurationFile)
+  private val dataStore = EngineFactory.buildStorageInstance(primaryDataStoreConfig)
   private val accessStatsClient = new RedisAccessStatsClient()
 
   val service = system.actorOf(

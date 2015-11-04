@@ -402,8 +402,6 @@ abstract class SettingsDataStoreTests
             val configurationList = configurations.asInstanceOf[List[Configuration]]
             configurationList.size should be(4)
 
-            println(s"${configurationList.toJson.prettyPrint}")
-
             configurationList.apply(0) should be(scheduled1)
             configurationList.apply(1) should be(scheduled3)
             configurationList.apply(2) should be(scheduled2)
