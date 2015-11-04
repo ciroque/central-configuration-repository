@@ -41,7 +41,13 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
       executeInCollection { collection =>
         collection.insert(toMongoDbObject(validatedConfiguration))
-        DataStoreResults.Added(validatedConfiguration)
+        val dsr = DataStoreResults.Added(validatedConfiguration)
+        insertAuditRecord(DateTime.now, validatedConfiguration, None).recoverWith {
+          case t: Throwable =>
+            recordValue("RecordAuditFailure::INSERT", t.toString)
+            Future.successful(DataStoreResults.Errored(validatedConfiguration, t.getMessage))
+        }
+        dsr
       }.recoverWith {
         case t: Throwable =>
           setResultException(t)
@@ -60,7 +66,13 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         collection.findAndModify(queryDoc, toMongoDbObject(validatedConfiguration)) match {
           case Some(foundDocument) =>
             val previousConfiguration = fromMongoDbObject(foundDocument)
-            DataStoreResults.Updated(previousConfiguration, validatedConfiguration)
+            val dsr = DataStoreResults.Updated(previousConfiguration, validatedConfiguration)
+            insertAuditRecord(DateTime.now, previousConfiguration, Some(validatedConfiguration)).recoverWith {
+              case t: Throwable =>
+                recordValue("RecordAuditFailure::UPDATE", t.toString)
+                Future.successful(DataStoreResults.Errored(validatedConfiguration, t.getMessage))
+            }
+            dsr
           case None => DataStoreResults.NotFound(Some(validatedConfiguration), Commons.DatastoreErrorMessages.NotFoundError)
         }
       }
@@ -172,6 +184,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
           Future.successful(dataStoreResult)
         }
       }
+  }
+
+  private def insertAuditRecord(when: DateTime, original: Configuration, updated: Option[Configuration]): Future[DataStoreResult] = {
+    Future.successful(DataStoreResults.Updated(original, updated.getOrElse(ConfigurationFactory.EmptyConfiguration)))
   }
 
   private def queryConfigurations(environment: String, application: String, scope: String, setting: String): Future[List[Configuration]] = {
