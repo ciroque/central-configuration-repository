@@ -5,6 +5,7 @@ case class DataStoreParams(hostname: String,
                            database: String,
                            catalog: String,
                            username: String,
-                           password: String)
+                           password: String,
+                          auditCatalog: String = "auditing")
 
 case class DataStoreConfig(clazz: Option[String], params: DataStoreParams)

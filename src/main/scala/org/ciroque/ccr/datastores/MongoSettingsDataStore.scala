@@ -30,7 +30,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   import org.bson.types.ObjectId
   import spray.json.JsValue
 
-  val client = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
+  def collection(database: String)(collection: String) =
+    MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))(database)(collection)
 
   override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 
@@ -187,7 +188,23 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def insertAuditRecord(when: DateTime, original: Configuration, updated: Option[Configuration]): Future[DataStoreResult] = {
-    Future.successful(DataStoreResults.Updated(original, updated.getOrElse(ConfigurationFactory.EmptyConfiguration)))
+    Future {
+      val queryDoc = MongoDBObject("_id" -> original._id)
+      val baseAuditEntry = List(("date", when), ("original", toMongoDbObject(original)))
+      val auditEntry = updated match {
+        case None => baseAuditEntry
+        case Some(config) => baseAuditEntry :+ ("updated", toMongoDbObject(config))
+      }
+      val updateDoc = MongoDBObject("$push" -> MongoDBObject("history" -> MongoDBObject(auditEntry)))
+      val auditCollection = collection(settings.database)(settings.auditCatalog)
+
+      val result = auditCollection.update(queryDoc, updateDoc, true)
+      if(result.isUpdateOfExisting) {
+        DataStoreResults.Updated(original, updated.getOrElse(ConfigurationFactory.EmptyConfiguration))
+      } else {
+        DataStoreResults.Added(original)
+      }
+    }
   }
 
   private def queryConfigurations(environment: String, application: String, scope: String, setting: String): Future[List[Configuration]] = {
@@ -210,7 +227,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def executeInCollection[T](fx: (MongoCollection) => T): Future[T] = {
-    Future { fx(client(settings.database)(settings.catalog)) }
+    Future { fx(collection(settings.database)(settings.catalog)) }
   }
 
   private def toMongoDbObject(configuration: Configuration) = {

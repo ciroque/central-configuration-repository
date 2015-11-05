@@ -432,7 +432,7 @@ abstract class SettingsDataStoreTests
       val mixedConfigurationList = ConfigurationList(mixedConfigurations)
 
       it("inserts a list of Configurations successfully") {
-        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList)) {
+        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList), Timeout(Span.Max)) {
           dsrs =>
             for {
               index <- originalConfigurations.indices
@@ -445,7 +445,7 @@ abstract class SettingsDataStoreTests
       }
 
       it("fails to insert a list of Configurations that exist already") {
-        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList)) {
+        whenReady(settingsDataStore.bulkInsertConfigurations(originalConfigurationList), Timeout(Span.Max)) {
           dsrs =>
             for {
               index <- originalConfigurations.indices
