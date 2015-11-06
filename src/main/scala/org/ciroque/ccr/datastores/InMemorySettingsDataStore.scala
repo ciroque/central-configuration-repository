@@ -191,6 +191,8 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
     Future.successful(dataStoreResult)
   }
 
+  override val supportsAuditHistory: Boolean = false
+
   override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] =
     Future.failed(new NotImplementedException())
 }

@@ -29,7 +29,8 @@ object ConfigurationFactory extends DefaultJsonProtocol {
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
   implicit val ConfigurationListFormat = jsonFormat1(ConfigurationList.apply)
-  implicit val AuditHistoryFormat = jsonFormat3(AuditHistory)
+  implicit val AuditEntryFormat = jsonFormat3(AuditEntry)
+  implicit val AuditHistoryFormat = jsonFormat2(AuditHistory)
 
   val EmptyConfigurationId = new UUID(0,0)
   val EmptyConfiguration = Configuration(EmptyConfigurationId, Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
@@ -93,5 +94,7 @@ object ConfigurationFactory extends DefaultJsonProtocol {
     }
   }
 
-  case class AuditHistory(date: DateTime, original: Configuration, updated: Option[Configuration])
+  case class AuditEntry(date: DateTime, original: Configuration, updated: Option[Configuration])
+
+  case class AuditHistory(uuid: UUID, events: List[AuditEntry])
 }

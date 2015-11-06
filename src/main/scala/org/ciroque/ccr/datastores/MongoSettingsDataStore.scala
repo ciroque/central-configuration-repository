@@ -3,15 +3,16 @@ package org.ciroque.ccr.datastores
 import java.util.UUID
 
 import com.mongodb.casbah.Imports._
-import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.{MongoClient, MongoCollection}
-import com.mongodb.{BasicDBObject, DBObject}
+import com.mongodb.{BasicDBList, BasicDBObject, DBObject}
+import org.bson.types.ObjectId
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Deleted, Found, NotFound}
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
-import org.ciroque.ccr.models.ConfigurationFactory.Configuration
+import org.ciroque.ccr.models.ConfigurationFactory.{AuditHistory, AuditEntry, Configuration}
 import org.joda.time.DateTime
 import org.slf4j.Logger
 import spray.json._
@@ -19,16 +20,146 @@ import spray.json._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+object MongoConversions {
+
+  def convertConfigurationToMongoDBObject(configuration: Configuration): MongoDBObject = {
+    import org.ciroque.ccr.core.Commons
+    RegisterJodaTimeConversionHelpers()
+
+    val coreKeys = List((Commons.KeyStrings.EnvironmentKey, configuration.key.environment)
+      , (Commons.KeyStrings.ApplicationKey, configuration.key.application)
+      , (Commons.KeyStrings.ScopeKey, configuration.key.scope)
+      , (Commons.KeyStrings.SettingKey, configuration.key.setting))
+
+    val keyValues = configuration.key.sourceId match {
+      case None => coreKeys
+      case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
+    }
+
+    def buildMongoDbObjectGraph(js: JsValue): Any = {
+      js match {
+        case JsString(s) ⇒ s
+        case JsNumber(n) ⇒ n.doubleValue()
+        case JsBoolean(b) ⇒ b
+        case JsObject(m) ⇒ m.map { case (k, v) ⇒ (k, buildMongoDbObjectGraph(v)) }
+        case JsArray(e) ⇒ e.map(j ⇒ buildMongoDbObjectGraph(j))
+        case JsFalse => "false"
+        case JsTrue ⇒ "true"
+        case JsNull ⇒ null
+      }
+    }
+
+    val value = buildMongoDbObjectGraph(configuration.value)
+
+    val mdbo = MongoDBObject(
+      Commons.KeyStrings.IdKey -> configuration._id,
+      Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
+      Commons.KeyStrings.ValueKey -> value,
+      Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
+        Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
+        Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
+        Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
+      )
+    )
+
+    mdbo
+  }
+
+  def convertMongoDBObjectToConfiguration(dbo: DBObject): Configuration = {
+    import org.ciroque.ccr.core.Commons
+    val db = dbo.toMap
+    val key = db.get(Commons.KeyStrings.KeyKey).asInstanceOf[DBObject]
+    val temporalization = db.get(Commons.KeyStrings.TemporalizationKey).asInstanceOf[DBObject]
+
+    val sourceId = if (key.containsField(Commons.KeyStrings.SourceIdKey))
+      Some(key.get(Commons.KeyStrings.SourceIdKey).toString)
+    else
+      None
+
+    val mongoValue = db.get(Commons.KeyStrings.ValueKey)
+
+    val value = toJsValue(mongoValue)
+
+    ConfigurationFactory(
+      UUID.fromString(db.get(Commons.KeyStrings.IdKey).toString),
+      key.get(Commons.KeyStrings.EnvironmentKey).toString,
+      key.get(Commons.KeyStrings.ApplicationKey).toString,
+      key.get(Commons.KeyStrings.ScopeKey).toString,
+      key.get(Commons.KeyStrings.SettingKey).toString,
+      sourceId,
+      value,
+      temporalization.get(Commons.KeyStrings.EffectiveAtKey).asInstanceOf[DateTime],
+      temporalization.get(Commons.KeyStrings.ExpiresAtKey).asInstanceOf[DateTime],
+      temporalization.get(Commons.KeyStrings.TtlKey).asInstanceOf[Long]
+    )
+  }
+
+  def toAuditHistory(dbo: DBObject): AuditHistory = {
+    val dboMap = dbo.toMap
+
+    def toAuditEntryList(a: Any): List[AuditEntry] = {
+      a match {
+        case dbl: BasicDBList =>
+          dbl.toList.map {
+            case dbo: BasicDBObject => dbObjectToAuditEntry(dbo)
+          }
+      }
+    }
+
+    def dbObjectToAuditEntry(dbo: DBObject): AuditEntry = {
+      val date = dbo.get("date").asInstanceOf[DateTime]
+      val original = convertMongoDBObjectToConfiguration(dbo.get(Commons.KeyStrings.OriginalKey).asInstanceOf[DBObject])
+      val updated = if(dbo.isDefinedAt(Commons.KeyStrings.UpdatedKey))
+        Some(convertMongoDBObjectToConfiguration(dbo.get(Commons.KeyStrings.UpdatedKey).asInstanceOf[DBObject]))
+      else
+        None
+
+      AuditEntry(date, original, updated)
+    }
+
+    val uuid = dboMap.get(Commons.KeyStrings.IdKey).asInstanceOf[UUID]
+    val dboHistory = dboMap.get(Commons.KeyStrings.HistoryKey)
+    val history = toAuditEntryList(dboHistory)
+
+    AuditHistory(uuid, history)
+  }
+
+  def convertMongoDBObjectToJsObject(obj: MongoDBObject): JsObject = {
+    JsObject(
+      obj.toSeq.map { case (key, value) =>
+        key -> toJsValue(value)
+    }.toMap)
+  }
+
+  def convertMongoDBListToJsArray(list: MongoDBList): JsArray = {
+    JsArray(list.map(toJsValue).toVector)
+  }
+
+  def toJsValue(a: Any): JsValue = a match {
+    case uuid: UUID => JsString(uuid.toString)
+    case id: ObjectId => JsString(id.toString)
+    case list: BasicDBList => convertMongoDBListToJsArray(list)
+    case obj: DBObject => convertMongoDBObjectToJsObject(obj)
+    case long: Long => JsNumber(long)
+    case int: Int => JsNumber(int)
+    case float: Float => JsNumber(float)
+    case double: Double => JsNumber(double)
+    case decimal: java.math.BigDecimal => JsNumber(decimal)
+    case decimal: scala.BigDecimal => JsNumber(decimal)
+    case string: String => JsString(string)
+    case boolean: Boolean => JsBoolean(boolean)
+    case null => JsNull
+    case jdt: DateTime => JsString(jdt.toString)
+    case list: List[Any] => JsArray(list.map(e => toJsValue(e)).toVector)
+  }
+}
+
 object MongoSettingsDataStore {
   val defaultPort = 27017
+  RegisterJodaTimeConversionHelpers()
 }
 
 class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Logger) extends SettingsDataStore {
-
-  import com.mongodb.BasicDBList
-  import com.mongodb.casbah.commons.MongoDBList
-  import org.bson.types.ObjectId
-  import spray.json.JsValue
 
   def collection(database: String)(collection: String) =
     MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))(database)(collection)
@@ -41,7 +172,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue("given-configuration", configuration.toJson.toString())
       recordValue("added-configuration", validatedConfiguration.toJson.toString())
       executeInCollection { collection =>
-        collection.insert(toMongoDbObject(validatedConfiguration))
+        collection.insert(MongoConversions.convertConfigurationToMongoDBObject(validatedConfiguration))
         val dsr = DataStoreResults.Added(validatedConfiguration)
         insertAuditRecord(DateTime.now, validatedConfiguration, None).recoverWith {
           case t: Throwable =>
@@ -64,9 +195,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
       recordValue("validated-configuration", validatedConfiguration.toJson.toString())
       val queryDoc = new BasicDBObject("_id", validatedConfiguration._id)
       executeInCollection { collection =>
-        collection.findAndModify(queryDoc, toMongoDbObject(validatedConfiguration)) match {
+        collection.findAndModify(queryDoc, MongoConversions.convertConfigurationToMongoDBObject(validatedConfiguration)) match {
           case Some(foundDocument) =>
-            val previousConfiguration = fromMongoDbObject(foundDocument)
+            val previousConfiguration = MongoConversions.convertMongoDBObjectToConfiguration(foundDocument)
             val dsr = DataStoreResults.Updated(previousConfiguration, validatedConfiguration)
             insertAuditRecord(DateTime.now, previousConfiguration, Some(validatedConfiguration)).recoverWith {
               case t: Throwable =>
@@ -190,10 +321,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   private def insertAuditRecord(when: DateTime, original: Configuration, updated: Option[Configuration]): Future[DataStoreResult] = {
     Future {
       val queryDoc = MongoDBObject("_id" -> original._id)
-      val baseAuditEntry = List(("date", when), ("original", toMongoDbObject(original)))
+      val baseAuditEntry = List(("date", when), ("original", MongoConversions.convertConfigurationToMongoDBObject(original)))
       val auditEntry = updated match {
         case None => baseAuditEntry
-        case Some(config) => baseAuditEntry :+ ("updated", toMongoDbObject(config))
+        case Some(config) => baseAuditEntry :+ ("updated", MongoConversions.convertConfigurationToMongoDBObject(config))
       }
       val updateDoc = MongoDBObject("$push" -> MongoDBObject("history" -> MongoDBObject(auditEntry)))
       val auditCollection = collection(settings.database)(settings.auditCatalog)
@@ -208,11 +339,11 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def queryConfigurations(environment: String, application: String, scope: String, setting: String): Future[List[Configuration]] = {
-    val configurationQuery = buildConfigurationQuery(environment, application, scope, setting)
+    val configurationQuery: DBObject = buildConfigurationQuery(environment, application, scope, setting)
     executeInCollection { collection =>
       collection.find(configurationQuery).toList match {
         case Nil => Nil
-        case list => list.map(fromMongoDbObject)
+        case list => list.map(MongoConversions.convertMongoDBObjectToConfiguration)
       }
     }
   }
@@ -230,106 +361,12 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     Future { fx(collection(settings.database)(settings.catalog)) }
   }
 
-  private def toMongoDbObject(configuration: Configuration) = {
-    import org.ciroque.ccr.core.Commons
-    RegisterJodaTimeConversionHelpers()
-
-    val coreKeys = List((Commons.KeyStrings.EnvironmentKey, configuration.key.environment)
-      , (Commons.KeyStrings.ApplicationKey, configuration.key.application)
-      , (Commons.KeyStrings.ScopeKey, configuration.key.scope)
-      , (Commons.KeyStrings.SettingKey, configuration.key.setting))
-
-    val keyValues = configuration.key.sourceId match {
-      case None => coreKeys
-      case Some(sourceId) => coreKeys :+ Commons.KeyStrings.SourceIdKey -> sourceId
+  override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] = {
+    withImplicitLogging("MongoSettingsDataStore::retrieveAuditHistory") {
+      val que = collection(settings.database)(settings.auditCatalog).find(MongoDBObject("_id" -> uuid)).toList
+      val pasa = MongoConversions.toAuditHistory(que.head)
+//      println(s">>>>>>> ${pasa.prettyPrint}")
+      Future.successful(DataStoreResults.Found(List(pasa)))
     }
-
-    def buildMongoDbObjectGraph(js: JsValue): Any = {
-      js match {
-        case JsString(s) ⇒ s
-        case JsNumber(n) ⇒ n.doubleValue()
-        case JsBoolean(b) ⇒ b
-        case JsObject(m) ⇒ m.map { case (k, v) ⇒ (k, buildMongoDbObjectGraph(v)) }
-        case JsArray(e) ⇒ e.map(j ⇒ buildMongoDbObjectGraph(j))
-        case JsFalse => "false"
-        case JsTrue ⇒ "true"
-        case JsNull ⇒ null
-      }
-    }
-
-    val value = buildMongoDbObjectGraph(configuration.value)
-
-    val mdbo = MongoDBObject(
-      Commons.KeyStrings.IdKey -> configuration._id,
-      Commons.KeyStrings.KeyKey -> MongoDBObject(keyValues),
-      Commons.KeyStrings.ValueKey -> value,
-      Commons.KeyStrings.TemporalizationKey -> MongoDBObject(
-        Commons.KeyStrings.EffectiveAtKey -> configuration.temporality.effectiveAt,
-        Commons.KeyStrings.ExpiresAtKey -> configuration.temporality.expiresAt,
-        Commons.KeyStrings.TtlKey -> configuration.temporality.ttl
-      )
-    )
-
-    mdbo
   }
-
-  private def fromMongoDbObject(dbo: DBObject): Configuration = {
-    import org.ciroque.ccr.core.Commons
-    RegisterJodaTimeConversionHelpers() // TODO: Can this be done at a broader scope and less frequently?
-    val db = dbo.toMap
-    val key = db.get(Commons.KeyStrings.KeyKey).asInstanceOf[DBObject]
-    val temporalization = db.get(Commons.KeyStrings.TemporalizationKey).asInstanceOf[DBObject]
-
-    val sourceId = if (key.containsField(Commons.KeyStrings.SourceIdKey))
-      Some(key.get(Commons.KeyStrings.SourceIdKey).toString)
-    else
-      None
-
-    val mongoValue = db.get(Commons.KeyStrings.ValueKey)
-
-    val value = fromMongo(mongoValue)
-
-    ConfigurationFactory(
-      UUID.fromString(db.get(Commons.KeyStrings.IdKey).toString),
-      key.get(Commons.KeyStrings.EnvironmentKey).toString,
-      key.get(Commons.KeyStrings.ApplicationKey).toString,
-      key.get(Commons.KeyStrings.ScopeKey).toString,
-      key.get(Commons.KeyStrings.SettingKey).toString,
-      sourceId,
-      value,
-      temporalization.get(Commons.KeyStrings.EffectiveAtKey).asInstanceOf[DateTime],
-      temporalization.get(Commons.KeyStrings.ExpiresAtKey).asInstanceOf[DateTime],
-      temporalization.get(Commons.KeyStrings.TtlKey).asInstanceOf[Long]
-    )
-  }
-
-  def fromMongoDBObject(obj: MongoDBObject): JsObject = {
-    JsObject(obj.toSeq.map { case (key, value) =>
-      key -> fromMongo(value)
-    }.toMap)
-  }
-
-  def fromMongoDBList(list: MongoDBList): JsArray = {
-    JsArray(list.map(fromMongo).toVector)
-  }
-
-  private def fromMongo(a: Any): JsValue = a match {
-    case uuid: UUID => JsString(uuid.toString)
-    case id: ObjectId => JsString(id.toString)
-    case list: BasicDBList => fromMongoDBList(list)
-    case obj: DBObject => fromMongoDBObject(obj)
-    case long: Long => JsNumber(long)
-    case int: Int => JsNumber(int)
-    case float: Float => JsNumber(float)
-    case double: Double => JsNumber(double)
-    case decimal: java.math.BigDecimal => JsNumber(decimal)
-    case decimal: scala.BigDecimal => JsNumber(decimal)
-    case string: String => JsString(string)
-    case boolean: Boolean => JsBoolean(boolean)
-    case null => JsNull
-    case jdt: DateTime => JsString(jdt.toString)
-  }
-
-  override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] =
-    Future.successful(DataStoreResults.Found(List()))
 }

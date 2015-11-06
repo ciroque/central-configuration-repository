@@ -713,4 +713,20 @@ abstract class SettingsDataStoreTests
       assertLogEvents("retrieveSettings", 1, wildcardEnvironmentSearch, wildcardApplicationSearch, wildcardScopeSearch)
     }
   }
+
+  describe("audit retrieval") {
+    it("returns a list of audit records for an id") {
+      if(settingsDataStore.supportsAuditHistory) {
+        whenReady(settingsDataStore.retrieveAuditHistory(testConfiguration._id), Timeout(Span.Max)) {
+          case Found(history: List[AuditHistory]) =>
+            history.length should be(1)
+            val events = history.head.events
+            events.length should be(2)
+            events.head.updated should be(None)
+            events.last.updated shouldNot be(None)
+          case failure => fail(s"RETRIEVE AUDIT HISTORY FAILED: $failure")
+        }
+      }
+    }
+  }
 }

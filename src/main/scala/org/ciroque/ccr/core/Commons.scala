@@ -44,6 +44,7 @@ object Commons {
   }
 
   object KeyStrings {
+
     final val ActorSystemName = "central-configuration-repository-system"
     final val IdKey = "_id"
     final val EnvironmentKey = "environment"
@@ -52,9 +53,12 @@ object Commons {
     final val SettingKey = "setting"
     final val EffectiveAtKey = "effectiveAt"
     final val ExpiresAtKey = "expiresAt"
+    final val HistoryKey = "history"
+    final val OriginalKey: String = "original"
     final val TtlKey = "ttl"
     final val TemporalityKey = "temporality"
     final val TemporalizationKey = "temporalization"
+    final val UpdatedKey: String = "updated"
     final val KeyKey = "key"
     final val ValueKey = "value"
     final var SourceIdKey = "sourceId"
