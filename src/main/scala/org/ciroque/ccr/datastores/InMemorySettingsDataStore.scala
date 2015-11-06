@@ -8,6 +8,7 @@ import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
 import org.slf4j.Logger
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.Future
 
@@ -189,4 +190,7 @@ class InMemorySettingsDataStore(implicit val logger: Logger) extends SettingsDat
 
     Future.successful(dataStoreResult)
   }
+
+  override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] =
+    Future.failed(new NotImplementedException())
 }

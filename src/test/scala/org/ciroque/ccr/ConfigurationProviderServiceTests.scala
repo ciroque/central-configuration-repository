@@ -4,6 +4,7 @@ import akka.actor.ActorRefFactory
 import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
+import org.ciroque.ccr.helpers.TestHelpers
 import org.ciroque.ccr.logging.CachingLogger
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.responses.{ConfigurationResponse, HyperMediaMessageResponse, InternalServerErrorResponse}
@@ -12,8 +13,7 @@ import org.easymock.EasyMock._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.mock._
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
-import spray.http.HttpHeaders.RawHeader
-import spray.http.{HttpHeader, StatusCodes}
+import spray.http.StatusCodes
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 import spray.testkit.ScalatestRouteTest
@@ -26,12 +26,13 @@ class ConfigurationProviderServiceTests
   with ScalatestRouteTest
   with Matchers
   with BeforeAndAfterEach
-  with EasyMockSugar {
+  with EasyMockSugar
+  with TestHelpers {
 
   override implicit val dataStore: SettingsDataStore = mock[SettingsDataStore]
   override implicit val accessStatsClient: AccessStatsClient = mock[AccessStatsClient]
   override implicit val logger = new CachingLogger()
-  val settingsPath = s"/${Commons.rootPath}/${Commons.settingsSegment}"
+  val settingsPath = s"/${Commons.rootPath}/${Commons.serviceSegment}"
 
   override def actorRefFactory: ActorRefFactory = system
 
@@ -79,7 +80,7 @@ class ConfigurationProviderServiceTests
           hyperMediaResponse._links.head._1 should equal("documentation")
           hyperMediaResponse._links.head._2 should equal("/documentation")
           hyperMediaResponse._links.last._1 should equal("service")
-          hyperMediaResponse._links.last._2 should equal(s"${Commons.rootPath}/${Commons.settingsSegment}")
+          hyperMediaResponse._links.last._2 should equal(s"${Commons.rootPath}/${Commons.serviceSegment}")
         }
       }
     }
@@ -377,11 +378,5 @@ class ConfigurationProviderServiceTests
         internalServerErrorResponse.cause should equal(cause.getMessage)
       }
     }
-  }
-
-  private def assertCorsHeaders(headers: List[HttpHeader]) = {
-    headers should contain(RawHeader("Access-Control-Allow-Headers", "Content-Type"))
-    headers should contain(RawHeader("Access-Control-Allow-Methods", "GET,PUT,POST"))
-    headers should contain(RawHeader("Access-Control-Allow-Origin", "*"))
   }
 }

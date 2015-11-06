@@ -1,5 +1,7 @@
 package org.ciroque.ccr.datastores
 
+import java.util.UUID
+
 import org.ciroque.ccr.datastores.DataStoreResults.DataStoreResult
 import org.ciroque.ccr.models.ConfigurationFactory.{ConfigurationList, Configuration, Key}
 import org.slf4j.Logger
@@ -18,6 +20,8 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
   def insertConfiguration(configuration: Configuration): Future[DataStoreResult]
 
   def retrieveApplications(environment: String): Future[DataStoreResult]
+
+  def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult]
 
   def retrieveEnvironments(): Future[DataStoreResult]
 

@@ -72,7 +72,7 @@ object BulkConfigurationStatusFactory {
 
   def buildHref(configuration: Configuration): String = {
     val key = configuration.key
-    val baseHref = s"/${Commons.rootPath}/${Commons.settingsSegment}/${key.environment}/${key.application}/${key.scope}/${key.setting}"
+    val baseHref = s"/${Commons.rootPath}/${Commons.serviceSegment}/${key.environment}/${key.application}/${key.scope}/${key.setting}"
     key.sourceId match {
       case None ⇒ baseHref
       case Some(value) ⇒ s"$baseHref?${Commons.KeyStrings.SourceIdKey}=$value"

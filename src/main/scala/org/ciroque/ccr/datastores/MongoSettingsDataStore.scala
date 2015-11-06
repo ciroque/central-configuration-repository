@@ -329,4 +329,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
     case null => JsNull
     case jdt: DateTime => JsString(jdt.toString)
   }
+
+  override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] =
+    Future.successful(DataStoreResults.Found(List()))
 }

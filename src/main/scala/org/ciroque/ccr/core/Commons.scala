@@ -21,9 +21,10 @@ object Commons {
   val DateTimeFormatter1123 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZoneUTC().withLocale(Locale.US)
 
   val rootPath = "ccr"
-  val settingsSegment = "settings"
-  val schedulingSegment = "schedule"
+  val auditSegment = "auditing"
   val bulkSegment = "bulk"
+  val schedulingSegment = "scheduling"
+  val serviceSegment = "configurations"
 
   val teaPotStatusCode = StatusCodes.registerCustom(418, "I'm a tea pot")
   val corsHeaders = List(

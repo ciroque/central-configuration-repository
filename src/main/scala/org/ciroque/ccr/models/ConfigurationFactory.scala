@@ -29,6 +29,7 @@ object ConfigurationFactory extends DefaultJsonProtocol {
   implicit val TemporalityResponseFormat = jsonFormat3(Temporality.apply)
   implicit val SettingResponseFormat = jsonFormat4(Configuration.apply)
   implicit val ConfigurationListFormat = jsonFormat1(ConfigurationList.apply)
+  implicit val AuditHistoryFormat = jsonFormat3(AuditHistory)
 
   val EmptyConfigurationId = new UUID(0,0)
   val EmptyConfiguration = Configuration(EmptyConfigurationId, Key("", "", "", ""), JsString(""), Temporality(DateTime.now(), DateTime.now(), 0L))
@@ -91,4 +92,6 @@ object ConfigurationFactory extends DefaultJsonProtocol {
       key.environment.toLowerCase == DefaultEnvironment || temporallyActive()
     }
   }
+
+  case class AuditHistory(date: DateTime, original: Configuration, updated: Option[Configuration])
 }

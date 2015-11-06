@@ -73,7 +73,7 @@ trait ConfigurationProviderService
               Commons.ApiDocumentationStrings.SeeDocumentation,
               Map(
                 "documentation" -> "/documentation",
-                "service" -> s"${Commons.rootPath}/${Commons.settingsSegment}"))
+                "service" -> s"${Commons.rootPath}/${Commons.serviceSegment}"))
           }
         }
       }
@@ -85,7 +85,7 @@ trait ConfigurationProviderService
     notes = Commons.ApiDocumentationStrings.EnvironmentsNotes,
     httpMethod = Commons.ApiDocumentationStrings.GetMethod,
     nickname = Commons.ApiDocumentationStrings.EnvironmentsRoute)
-  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment) {
+  def environmentsRoute = pathPrefix(Commons.rootPath / Commons.serviceSegment) {
     pathEndOrSingleSlash {
       get { ctx =>
         import org.ciroque.ccr.responses.EnvironmentGetResponseProtocol._
@@ -110,7 +110,7 @@ trait ConfigurationProviderService
       dataType = Commons.ApiDocumentationStrings.StringDataType,
       required = true,
       paramType = Commons.ApiDocumentationStrings.PathParamType)))
-  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment) {
+  def applicationsRoute = pathPrefix(Commons.rootPath / Commons.serviceSegment / Segment) {
     environment =>
       pathEndOrSingleSlash {
         get { ctx =>
@@ -143,7 +143,7 @@ trait ConfigurationProviderService
       required = true,
       paramType = Commons.ApiDocumentationStrings.PathParamType)
   ))
-  def scopesRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment) {
+  def scopesRoute = pathPrefix(Commons.rootPath / Commons.serviceSegment / Segment / Segment) {
     (environment, application) =>
       pathEndOrSingleSlash {
         get { ctx =>
@@ -180,7 +180,7 @@ trait ConfigurationProviderService
       required = true,
       paramType = Commons.ApiDocumentationStrings.PathParamType)
   ))
-  def settingsRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment) {
+  def settingsRoute = pathPrefix(Commons.rootPath / Commons.serviceSegment / Segment / Segment / Segment) {
     (environment, application, scope) =>
       pathEndOrSingleSlash {
         get { ctx =>
@@ -261,7 +261,7 @@ trait ConfigurationProviderService
       required = true,
       paramType = Commons.ApiDocumentationStrings.PathParamType)
   ))
-  def configurationRoute = pathPrefix(Commons.rootPath / Commons.settingsSegment / Segment / Segment / Segment / Segment) {
+  def configurationRoute = pathPrefix(Commons.rootPath / Commons.serviceSegment / Segment / Segment / Segment / Segment) {
     (environment, application, scope, setting) ⇒
       parameter('sourceId ?) { sourceId ⇒
         pathEndOrSingleSlash {
