@@ -8,7 +8,7 @@ import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHe
 import com.mongodb.casbah.{MongoClient, MongoCollection}
 import com.mongodb.{BasicDBObject, DBObject}
 import org.ciroque.ccr.core.Commons
-import org.ciroque.ccr.datastores.DataStoreResults.{DataStoreResult, Deleted, Found, NotFound}
+import org.ciroque.ccr.datastores.DataStoreResults._
 import org.ciroque.ccr.logging.ImplicitLogging._
 import org.ciroque.ccr.models.ConfigurationFactory
 import org.ciroque.ccr.models.ConfigurationFactory.Configuration
@@ -30,9 +30,10 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   import org.bson.types.ObjectId
   import spray.json.JsValue
 
-  def collection(database: String)(collection: String) =
-    MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))(database)(collection)
-
+  val databaseClient = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
+  
+  val configurationsDatabase = databaseClient(settings.database)
+  
   override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 
   override def insertConfiguration(configuration: Configuration): Future[DataStoreResult] = {
@@ -196,7 +197,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         case Some(config) => baseAuditEntry :+ ("updated", toMongoDbObject(config))
       }
       val updateDoc = MongoDBObject("$push" -> MongoDBObject("history" -> MongoDBObject(auditEntry)))
-      val auditCollection = collection(settings.database)(settings.auditCatalog)
+      val auditCollection = configurationsDatabase(settings.auditCatalog)
 
       val result = auditCollection.update(queryDoc, updateDoc, true)
       if(result.isUpdateOfExisting) {
@@ -205,6 +206,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         DataStoreResults.Added(original)
       }
     }
+//    Future.successful(Added(ConfigurationFactory.EmptyConfiguration))
   }
 
   private def queryConfigurations(environment: String, application: String, scope: String, setting: String): Future[List[Configuration]] = {
@@ -227,7 +229,9 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def executeInCollection[T](fx: (MongoCollection) => T): Future[T] = {
-    Future { fx(collection(settings.database)(settings.catalog)) }
+    Future {
+      fx(configurationsDatabase(settings.catalog))
+    }
   }
 
   private def toMongoDbObject(configuration: Configuration) = {
