@@ -53,6 +53,8 @@ abstract class SettingsDataStore(implicit private val logger: Logger) extends Cc
     Future.sequence(listOfFutures)
   }
 
+  val supportsAuditHistory: Boolean = true
+
   protected def checkWildcards(input: String) = {
     if (input.contains(".*"))
       input.r
