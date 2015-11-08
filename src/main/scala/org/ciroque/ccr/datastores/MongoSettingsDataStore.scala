@@ -160,9 +160,11 @@ object MongoSettingsDataStore {
 }
 
 class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Logger) extends SettingsDataStore {
-
-  def collection(database: String)(collection: String) =
-    MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))(database)(collection)
+  
+  val mongoClient = MongoClient(settings.hostname, settings.port.getOrElse(MongoSettingsDataStore.defaultPort))
+  
+  val configurationCollection = mongoClient(settings.database)(settings.catalog)
+  val auditingCollection = mongoClient(settings.database)(settings.auditCatalog)
 
   override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 
@@ -327,9 +329,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         case Some(config) => baseAuditEntry :+ ("updated", MongoConversions.convertConfigurationToMongoDBObject(config))
       }
       val updateDoc = MongoDBObject("$push" -> MongoDBObject("history" -> MongoDBObject(auditEntry)))
-      val auditCollection = collection(settings.database)(settings.auditCatalog)
 
-      val result = auditCollection.update(queryDoc, updateDoc, true)
+      val result = auditingCollection.update(queryDoc, updateDoc, true)
       if(result.isUpdateOfExisting) {
         DataStoreResults.Updated(original, updated.getOrElse(ConfigurationFactory.EmptyConfiguration))
       } else {
@@ -358,15 +359,14 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   }
 
   private def executeInCollection[T](fx: (MongoCollection) => T): Future[T] = {
-    Future { fx(collection(settings.database)(settings.catalog)) }
+    Future { fx(configurationCollection) }
   }
 
   override def retrieveAuditHistory(uuid: UUID): Future[DataStoreResult] = {
     withImplicitLogging("MongoSettingsDataStore::retrieveAuditHistory") {
-      val que = collection(settings.database)(settings.auditCatalog).find(MongoDBObject("_id" -> uuid)).toList
-      val pasa = MongoConversions.toAuditHistory(que.head)
-//      println(s">>>>>>> ${pasa.prettyPrint}")
-      Future.successful(DataStoreResults.Found(List(pasa)))
+      val mongoObjects = auditingCollection.find(MongoDBObject("_id" -> uuid)).toList
+      val auditHistories = MongoConversions.toAuditHistory(mongoObjects.head)
+      Future.successful(DataStoreResults.Found(List(auditHistories)))
     }
   }
 }
