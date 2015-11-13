@@ -166,6 +166,8 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
   val configurationCollection = mongoClient(settings.database)(settings.catalog)
   val auditingCollection = mongoClient(settings.database)(settings.auditCatalog)
 
+  RegisterJodaTimeConversionHelpers()
+
   override def deleteConfiguration(configuration: Configuration): Future[DataStoreResult] = Future.successful(Deleted(configuration))
 
   override def insertConfiguration(configuration: Configuration): Future[DataStoreResult] = {

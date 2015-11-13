@@ -54,7 +54,9 @@ object ImplicitLogging {
     }
 
     def build(name: String, started: DateTime, ended: DateTime): LogEntry = {
-      LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values, result)
+      val le = LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values, result)
+      values = List()
+      le
     }
   }
 
