@@ -7,9 +7,8 @@ import org.ciroque.ccr.core.Commons
 import org.ciroque.ccr.datastores.{DataStoreResults, SettingsDataStore}
 import org.ciroque.ccr.helpers.{TestHelpers, TestObjectGenerator}
 import org.ciroque.ccr.logging.CachingLogger
-import org.ciroque.ccr.models.ConfigurationFactory.AuditEntry
+import org.ciroque.ccr.models.ConfigurationFactory.{AuditHistory, AuditEntry}
 import org.ciroque.ccr.responses.AuditHistoryResponse
-import org.joda.time.DateTime
 import org.scalatest.mock.EasyMockSugar
 import org.scalatest.{BeforeAndAfterEach, FunSpec, Matchers}
 import spray.http.StatusCodes
@@ -34,8 +33,9 @@ class ConfigurationAuditServiceTests
   describe("auditing endpoint") {
     it("requires an id and returns an appropriate list of auditing changes") {
       val uuid: UUID = UUID.randomUUID()
-      val auditHistoryList: List[AuditEntry] = TestObjectGenerator.auditHistoryList(uuid)
-      val dataStoreResults = DataStoreResults.Found(auditHistoryList)
+      val auditEntries: List[AuditEntry] = TestObjectGenerator.auditHistoryList(uuid)
+      val auditHistory: AuditHistory = AuditHistory(uuid, auditEntries)
+      val dataStoreResults = DataStoreResults.Found(List(auditHistory))
 
       expecting {
         dataStore.retrieveAuditHistory(uuid).andReturn(Future.successful(dataStoreResults))
@@ -46,11 +46,13 @@ class ConfigurationAuditServiceTests
           status should be(StatusCodes.OK)
           assertCorsHeaders(headers)
           val response = responseAs[AuditHistoryResponse]
-          response.history.length should be(3)
+          response.history.length should be(1)
+          val histories = response.history.head
+
           for {
-            index <- auditHistoryList.indices
+            index <- histories.events.indices
           } yield {
-            response.history.apply(index).toJson should be(response.history.apply(index).toJson)
+            histories.events.apply(index).toJson should be(auditEntries.apply(index).toJson)
           }
         }
       }
