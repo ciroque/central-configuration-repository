@@ -8,7 +8,7 @@ import org.ciroque.ccr.core.{Commons, CcrService}
 import org.ciroque.ccr.datastores.DataStoreResults.{NotFound, Found}
 import org.ciroque.ccr.datastores.SettingsDataStore
 import org.ciroque.ccr.logging.ImplicitLogging._
-import org.ciroque.ccr.models.ConfigurationFactory.AuditEntry
+import org.ciroque.ccr.models.ConfigurationFactory.AuditHistory
 import org.ciroque.ccr.responses.AuditHistoryResponse
 import org.slf4j.Logger
 import spray.http.MediaTypes._
@@ -29,7 +29,7 @@ trait ConfigurationAuditService
   implicit val dataStore: SettingsDataStore
   implicit val logger: Logger
 
-  def auditRecordRoute = path(Commons.rootPath / Commons.serviceSegment / Commons.auditSegment / Segment) {
+  def auditRecordRoute = path(Commons.rootPath / Commons.auditSegment / Commons.serviceSegment / Segment) {
     uuid =>
       pathEndOrSingleSlash {
         get { context =>
@@ -40,7 +40,7 @@ trait ConfigurationAuditService
             } yield {
               import org.ciroque.ccr.responses.AuditHistoryResponseProtocol._
               val (statusCode, response) = eventualResult match {
-                case Found(history: List[AuditEntry]) => (StatusCodes.OK, AuditHistoryResponse(history).toJson)
+                case Found(history: List[AuditHistory]) => (StatusCodes.OK, AuditHistoryResponse(history).toJson)
                 case NotFound(Some(_), msg) => (StatusCodes.NotFound, JsString(msg))
               }
 

@@ -41,7 +41,7 @@ class ConfigurationAuditServiceTests
         dataStore.retrieveAuditHistory(uuid).andReturn(Future.successful(dataStoreResults))
       }
       whenExecuting(dataStore) {
-        Get(s"/${Commons.rootPath}/${Commons.serviceSegment}/${Commons.auditSegment}/${uuid.toString}") ~> routes ~> check {
+        Get(s"/${Commons.rootPath}/${Commons.auditSegment}/${Commons.serviceSegment}/${uuid.toString}") ~> routes ~> check {
           import org.ciroque.ccr.responses.AuditHistoryResponseProtocol._
           status should be(StatusCodes.OK)
           assertCorsHeaders(headers)
