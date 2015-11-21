@@ -5,12 +5,13 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.Logger
 import spray.json.{DefaultJsonProtocol, _}
 
+import scala.util.DynamicVariable
+
 object ImplicitLogging {
 
-  private[logging] val activeLoggers = new ThreadLocal[LogEntryBuilder]
+  private[logging] val activeLoggers = new DynamicVariable[LogEntryBuilder](new LogEntryBuilder)
 
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
-    activeLoggers.set(new LogEntryBuilder)
     val started: DateTime = DateTime.now(DateTimeZone.UTC)
 
     try {
@@ -30,7 +31,7 @@ object ImplicitLogging {
     getCurrentImplicitLogger.result = Error(msg)
   }
 
-  def getCurrentImplicitLogger = activeLoggers.get
+  def getCurrentImplicitLogger = activeLoggers.value
 
   def recordValue(name: String, value: String) = {
     getCurrentImplicitLogger.addValue(name, value)
@@ -39,12 +40,12 @@ object ImplicitLogging {
   trait Result
 
   class LogEntryBuilder() {
-    var values: List[Values] = List()
+    var values: collection.concurrent.Map[String, String] = new collection.concurrent.TrieMap[String, String]
     var result: Result = Success()
 
-    def addValue(name: String, value: String): List[Values] = {
-      values = values :+ Values(name, value)
-      values
+    def addValue(name: String, value: String) = {
+      val prev = values.put(name, value)
+
     }
 
     def buildAsJson(name: String, started: DateTime, ended: DateTime): JsValue = {
@@ -53,25 +54,19 @@ object ImplicitLogging {
     }
 
     def build(name: String, started: DateTime, ended: DateTime): LogEntry = {
-      LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values, result)
+      LogEntry(name, Timing(started, ended, ended.getMillis - started.getMillis), values.toMap, result)
     }
   }
 
-  case class LogEntry(name: String, timing: Timing, values: List[Values], result: Result = Success())
+  case class LogEntry(name: String, timing: Timing, values: Map[String, String], result: Result = Success())
 
   case class Timing(start: DateTime, end: DateTime, duration: Long)
-
-  case class Values(name: String, value: String)
 
   case class Success() extends Result
 
   case class Error(msg: String) extends Result
 
   case class Exception(msg: String, cause: Throwable) extends Result
-
-  object ValuesProtocol extends DefaultJsonProtocol {
-    implicit def valueFormat: RootJsonFormat[Values] = jsonFormat2(Values)
-  }
 
   object TimingProtocol extends DefaultJsonProtocol {
     implicit def timingFormat: RootJsonFormat[Timing] = jsonFormat3(Timing)
@@ -101,11 +96,8 @@ object ImplicitLogging {
   }
 
   object LogEntryProtocol extends DefaultJsonProtocol {
-
     import org.ciroque.ccr.logging.ImplicitLogging.TimingProtocol._
-    import org.ciroque.ccr.logging.ImplicitLogging.ValuesProtocol._
 
     implicit def logEntryFormat: RootJsonFormat[LogEntry] = jsonFormat4(LogEntry)
   }
-
 }

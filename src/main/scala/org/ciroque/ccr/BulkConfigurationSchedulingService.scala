@@ -55,7 +55,7 @@ trait BulkConfigurationSchedulingService
       eventualResult ← response
     } yield {
       val rval = eventualResult.toJson.toString()
-//      recordValue("result", rval)
+      recordValue("result", rval)
       context.complete(HttpResponse(
         StatusCode.int2StatusCode(eventualResult.getStatusCode),
         HttpEntity(`application/json`, eventualResult.toJson.toString()),
