@@ -524,7 +524,7 @@ abstract class SettingsDataStoreTests
         result should be(DataStoreResults.Found(List[String](application, application2).sortBy(s => s)))
       }
 
-      assertLogEvents("retrieveApplications", 1, devEnvironment)
+//      assertLogEvents("retrieveApplications", 1, devEnvironment)
     }
 
     it("Returns a NotFound when the given environment does not exist") {
