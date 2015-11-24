@@ -20,6 +20,7 @@ object ImplicitLogging {
       val ended = DateTime.now(DateTimeZone.UTC)
       val logEntry = getCurrentImplicitLogger.buildAsJson(name, started, ended)
       logger.info(logEntry.toString())
+      getCurrentImplicitLogger.close()
     }
   }
 
@@ -44,8 +45,12 @@ object ImplicitLogging {
     var result: Result = Success()
 
     def addValue(name: String, value: String) = {
-      val prev = values.put(name, value)
+      values.put(name, value)
+    }
 
+    def close(): Unit = {
+      values.clear()
+      result = Success()
     }
 
     def buildAsJson(name: String, started: DateTime, ended: DateTime): JsValue = {
