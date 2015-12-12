@@ -13,7 +13,10 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       withImplicitLogging(implicitLoggerName) {
         implicit val logger = mockLogger
 
-        ()
+        for {
+          i <- 0 until 1000
+          j = i * 3.14
+        } yield j
 
         recordValue("Value1", "TheValueOfOne")
       }
@@ -33,7 +36,10 @@ class ImplicitLoggingTests extends FunSpec with Matchers with EasyMockSugar {
       withImplicitLogging(implicitLoggerName) {
         implicit val logger = mockLogger
 
-        ()
+        for {
+          i <- 0 until 1000
+          j = i * 3.14
+        } yield j
 
         recordValue("Value1", "TheValueOfOne")
         setResultError("ERROR_MESSAGE")

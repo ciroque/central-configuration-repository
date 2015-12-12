@@ -116,6 +116,7 @@ trait ConfigurationProviderService
         get { ctx =>
           import org.ciroque.ccr.responses.ApplicationGetResponseProtocol._
           withImplicitLoggingAndStats("ConfigurationProviderService::applicationsRoute", environment, "", "", "") {
+            implicit val logEntryBuilder = getCurrentImplicitLogger
             completeRoute[String](
               ctx,
               dataStore.retrieveApplications(environment),

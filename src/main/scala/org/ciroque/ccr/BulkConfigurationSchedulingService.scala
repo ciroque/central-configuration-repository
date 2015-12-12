@@ -11,7 +11,7 @@ import org.ciroque.ccr.responses.BulkConfigurationResponseProtocol._
 import org.slf4j.Logger
 import spray.http.MediaTypes._
 import spray.http.{StatusCode, HttpEntity, StatusCodes, HttpResponse}
-import spray.routing.{RequestContext, HttpService}
+import spray.routing.{ExceptionHandler, RequestContext, HttpService}
 import spray.httpx.SprayJsonSupport._
 import spray.json._
 
@@ -29,17 +29,19 @@ trait BulkConfigurationSchedulingService
   def bulkRoute = path(Commons.rootPath / Commons.schedulingSegment / Commons.bulkSegment) {
     pathEndOrSingleSlash {
       entity(as[ConfigurationList]) {
-        configurations ⇒
-          post { context ⇒
+        configurations =>
+          post { context =>
             withImplicitLogging("ConfigurationBulkSchedulingService::POST") {
+              implicit val logEntryBuilder = getCurrentImplicitLogger
               recordValue("configurations", configurations.toJson.toString())
               val dsr = dataStore.bulkInsertConfigurations(configurations)
               val bulkConfigurationResponse = processDataStoreResult(dsr)
               respond(context, bulkConfigurationResponse)
             }
           } ~
-          put { context ⇒
+          put { context =>
             withImplicitLogging("ConfigurationBulkSchedulingService::PUT") {
+              implicit val logEntryBuilder = getCurrentImplicitLogger
               recordValue("configurations", configurations.toJson.toString())
               val dsr = dataStore.bulkUpdateConfigurations(configurations)
               val bulkConfigurationResponse = processDataStoreResult(dsr)
@@ -50,12 +52,12 @@ trait BulkConfigurationSchedulingService
     }
   }
 
-  private def respond(context: RequestContext, response: Future[BulkConfigurationResponse]) = {
+  private def respond(context: RequestContext, response: Future[BulkConfigurationResponse])(implicit logEntryBuilder: LogEntryBuilder) = {
     for {
-      eventualResult ← response
+      eventualResult <- response
     } yield {
       val rval = eventualResult.toJson.toString()
-      recordValue("result", rval)
+      logEntryBuilder.addValue("result", rval)
       context.complete(HttpResponse(
         StatusCode.int2StatusCode(eventualResult.getStatusCode),
         HttpEntity(`application/json`, eventualResult.toJson.toString()),
@@ -87,5 +89,9 @@ trait BulkConfigurationSchedulingService
     }.recoverWith { case t: Throwable => Future.successful(BulkConfigurationResponse.FailedBulkConfigurationResponse(t.getMessage)) }
   }
 
-  def routes = bulkRoute
+  val withExceptionHandling = handleExceptions(ExceptionHandler {
+    case t: Throwable => println("$t"); complete(StatusCodes.InternalServerError, t.getMessage)
+  })
+
+  def routes = withExceptionHandling { bulkRoute }
 }

@@ -33,7 +33,7 @@ class BulkConfigurationSchedulingServiceTests extends FunSpec
 
   override def beforeEach() = reset(dataStore)
 
-  describe("ConfigurationBatchSchedulingService") {
+  describe("BulkConfigurationSchedulingServiceTests") {
 
     describe("bulk insert") {
 

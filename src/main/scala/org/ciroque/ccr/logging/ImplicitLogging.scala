@@ -9,9 +9,15 @@ import scala.util.DynamicVariable
 
 object ImplicitLogging {
 
-  private[logging] val activeLoggers = new DynamicVariable[LogEntryBuilder](new LogEntryBuilder)
+//  private[logging] val activeLoggers = new DynamicVariable[LogEntryBuilder](new LogEntryBuilder)
+  private[logging] val activeLoggers = new ThreadLocal[LogEntryBuilder]()
+
+  activeLoggers.set(new LogEntryBuilder())
+
+  def getCurrentImplicitLogger = activeLoggers.get()
 
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
+
     val started: DateTime = DateTime.now(DateTimeZone.UTC)
 
     try {
@@ -32,8 +38,6 @@ object ImplicitLogging {
     getCurrentImplicitLogger.result = Error(msg)
   }
 
-  def getCurrentImplicitLogger = activeLoggers.value
-
   def recordValue(name: String, value: String) = {
     getCurrentImplicitLogger.addValue(name, value)
   }
@@ -41,16 +45,20 @@ object ImplicitLogging {
   trait Result
 
   class LogEntryBuilder() {
+//    var values: Map[String, String] = Map()
     var values: collection.concurrent.Map[String, String] = new collection.concurrent.TrieMap[String, String]
     var result: Result = Success()
 
     def addValue(name: String, value: String) = {
+//      values = values + (name -> value)
       values.put(name, value)
     }
 
     def close(): Unit = {
-      values.clear()
-      result = Success()
+      synchronized {
+//        values.clear()
+        result = Success()
+      }
     }
 
     def buildAsJson(name: String, started: DateTime, ended: DateTime): JsValue = {
@@ -63,7 +71,7 @@ object ImplicitLogging {
     }
   }
 
-  case class LogEntry(name: String, timing: Timing, values: Map[String, String], result: Result = Success())
+  case class LogEntry(name: String, timing: Timing, values: Map[String, String], result: Result = Success(), threadId: Long = Thread.currentThread().getId)
 
   case class Timing(start: DateTime, end: DateTime, duration: Long)
 
@@ -103,6 +111,6 @@ object ImplicitLogging {
   object LogEntryProtocol extends DefaultJsonProtocol {
     import org.ciroque.ccr.logging.ImplicitLogging.TimingProtocol._
 
-    implicit def logEntryFormat: RootJsonFormat[LogEntry] = jsonFormat4(LogEntry)
+    implicit def logEntryFormat: RootJsonFormat[LogEntry] = jsonFormat5(LogEntry)
   }
 }
