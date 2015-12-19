@@ -186,7 +186,7 @@ class MongoSettingsDataStore(settings: DataStoreParams)(implicit val logger: Log
         dsr
       }.recoverWith {
         case t: Throwable =>
-          setResultException(t)
+//          setResultException(t)
           Future.successful(DataStoreResults.Errored(validatedConfiguration, Commons.DatastoreErrorMessages.DuplicateKeyError))
       }
     }

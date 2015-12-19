@@ -1,11 +1,9 @@
 package org.ciroque.ccr.logging
 
-import org.ciroque.ccr.core.CommonJsonFormatters._
+import org.ciroque.ccr.core.CommonJsonFormatters
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.Logger
 import spray.json.{DefaultJsonProtocol, _}
-
-import scala.util.DynamicVariable
 
 object ImplicitLogging {
 
@@ -17,17 +15,7 @@ object ImplicitLogging {
   def getCurrentImplicitLogger = activeLoggers.get()
 
   def withImplicitLogging[R](name: String)(fx: => R)(implicit logger: Logger) = {
-
-    val started: DateTime = DateTime.now(DateTimeZone.UTC)
-
-    try {
-      fx
-    } finally {
-      val ended = DateTime.now(DateTimeZone.UTC)
-      val logEntry = getCurrentImplicitLogger.buildAsJson(name, started, ended)
-      logger.info(logEntry.toString())
-      getCurrentImplicitLogger.close()
-    }
+    LogEntryBuilder(name)(fx)(logger)
   }
 
   def setResultException(cause: Throwable) = {
@@ -44,8 +32,24 @@ object ImplicitLogging {
 
   trait Result
 
+  object LogEntryBuilder extends LogEntryBuilder {
+    def apply[T](name: String)(fx: => T)(implicit logger: Logger) = {
+      val previous = activeLoggers.get
+      activeLoggers.set(this)
+      val started: DateTime = DateTime.now(DateTimeZone.UTC)
+      try {
+        fx
+      } finally {
+        val ended = DateTime.now(DateTimeZone.UTC)
+        val logEntry = getCurrentImplicitLogger.buildAsJson(name, started, ended)
+        logger.info(logEntry.toString())
+        getCurrentImplicitLogger.close()
+        activeLoggers.set(previous)
+      }
+    }
+  }
+
   class LogEntryBuilder() {
-//    var values: Map[String, String] = Map()
     var values: collection.concurrent.Map[String, String] = new collection.concurrent.TrieMap[String, String]
     var result: Result = Success()
 
@@ -82,7 +86,8 @@ object ImplicitLogging {
   case class Exception(msg: String, cause: Throwable) extends Result
 
   object TimingProtocol extends DefaultJsonProtocol {
-    implicit def timingFormat: RootJsonFormat[Timing] = jsonFormat3(Timing)
+    import CommonJsonFormatters._
+    implicit def timingFormat = jsonFormat3(Timing)
   }
 
   implicit object ResultJsonFormat extends RootJsonFormat[Result] {
